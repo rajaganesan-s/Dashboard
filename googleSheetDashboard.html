@@ -421,6 +421,10 @@
             border-color: #334155 !important;
         }
 
+        :root[data-theme="dark"] ::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
         td {
             padding: 1rem 1.5rem;
             border-bottom: 1px solid var(--border);
@@ -728,6 +732,10 @@
             if (icon) {
                 icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
             }
+            // Trigger chart refresh to apply new theme colors
+            if (typeof filterData === 'function' && typeof rawData !== 'undefined' && rawData.length > 0) {
+                filterData();
+            }
         }
 
         function connectToSheet() {
@@ -800,6 +808,11 @@
                     });
 
                     rawData = data;
+
+                    // Default Sort: Target Date Descending
+                    sortCol = 'TARGET DATE';
+                    sortAsc = false;
+
                     initDashboard();
                 } else {
                     // Setup default headers if empty
@@ -1253,29 +1266,39 @@
             // --- STYLING & CONFIG ---
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-            // Professional Palettes
-            const colors = {
-                primary: '#6366f1', // Indigo 500
-                success: '#10b981', // Emerald 500
-                warning: '#f59e0b', // Amber 500
-                danger: '#ef4444', // Red 500
-                info: '#3b82f6', // Blue 500
-                purple: '#8b5cf6', // Violet 500
-                pink: '#ec4899', // Pink 500
-                cyan: '#06b6d4', // Cyan 500
-                slate: '#64748b'  // Slate 500
+            // Dynamic Palette: Brighter for Dark Mode, Saturated for Light Mode
+            const colors = isDark ? {
+                primary: '#818cf8', // Indigo 400
+                success: '#34d399', // Emerald 400
+                warning: '#fbbf24', // Amber 400
+                danger: '#f87171',  // Red 400
+                info: '#60a5fa', // Blue 400
+                purple: '#a78bfa', // Violet 400
+                pink: '#f472b6', // Pink 400
+                cyan: '#22d3ee', // Cyan 400
+                slate: '#94a3b8'
+            } : {
+                primary: '#4f46e5', // Indigo 600
+                success: '#059669', // Emerald 600
+                warning: '#d97706', // Amber 600
+                danger: '#dc2626',  // Red 600
+                info: '#2563eb', // Blue 600
+                purple: '#7c3aed', // Violet 600
+                pink: '#db2777', // Pink 600
+                cyan: '#0891b2', // Cyan 600
+                slate: '#475569'
             };
 
             const palette = Object.values(colors);
-            const textColor = isDark ? '#94a3b8' : '#64748b';
-            const gridColor = isDark ? '#334155' : '#f1f5f9';
+            const textColor = isDark ? '#e2e8f0' : '#64748b';
+            const gridColor = isDark ? 'transparent' : '#f1f5f9';
 
             const commonOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false, // Cleaner look without default legend
+                        display: false,
                     },
                     tooltip: {
                         backgroundColor: isDark ? '#1e293b' : '#ffffff',
@@ -1292,7 +1315,7 @@
                 layout: { padding: 10 }
             };
 
-            // 1. STATUS BREAKDOWN (Classic Style)
+            // 1. STATUS BREAKDOWN
             if (charts.status) charts.status.destroy();
             const ctxS = document.getElementById('chartStatus').getContext('2d');
             charts.status = new Chart(ctxS, {
@@ -1301,8 +1324,10 @@
                     labels: Object.keys(sCounts),
                     datasets: [{
                         data: Object.values(sCounts),
-                        // Classic Bright Colors
-                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#cbd5e1', '#8b5cf6', '#ec4899', '#06b6d4'],
+                        backgroundColor: [
+                            colors.success, colors.info, colors.warning, colors.danger,
+                            colors.slate, colors.purple, colors.pink, colors.cyan
+                        ],
                         borderWidth: 0
                     }]
                 },
@@ -1319,15 +1344,15 @@
                 }
             });
 
-            // 2. APPS DISTRIBUTION (Vertical Bar - Gradient)
+            // 2. APPS DISTRIBUTION (Vertical Bar - Purple Theme)
             if (document.getElementById('chartApps')) {
                 if (charts.apps) charts.apps.destroy();
                 const ctxA = document.getElementById('chartApps').getContext('2d');
 
-                // Create Gradient
+                // Dynamic Gradient
                 let gradA = ctxA.createLinearGradient(0, 0, 0, 300);
                 gradA.addColorStop(0, colors.purple);
-                gradA.addColorStop(1, 'rgba(139, 92, 246, 0.2)');
+                gradA.addColorStop(1, isDark ? 'rgba(167, 139, 250, 0.1)' : 'rgba(124, 58, 237, 0.1)');
 
                 charts.apps = new Chart(ctxA, {
                     type: 'bar',
@@ -1360,14 +1385,13 @@
                 });
             }
 
-            // 3. OWNER WORKLOAD (Matches Timeline Style - Green Area Chart)
+            // 3. OWNER WORKLOAD (Line/Area - Green Theme)
             if (charts.owner) charts.owner.destroy();
             const ctxO = document.getElementById('chartOwner').getContext('2d');
 
-            // Create Green Gradient (Same as Timeline)
             let gradO = ctxO.createLinearGradient(0, 0, 0, 300);
-            gradO.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
-            gradO.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+            gradO.addColorStop(0, isDark ? 'rgba(52, 211, 153, 0.4)' : 'rgba(5, 150, 105, 0.4)');
+            gradO.addColorStop(1, isDark ? 'rgba(52, 211, 153, 0.0)' : 'rgba(5, 150, 105, 0.0)');
 
             charts.owner = new Chart(ctxO, {
                 type: 'line',
@@ -1380,8 +1404,8 @@
                         borderWidth: 2,
                         backgroundColor: gradO,
                         fill: true,
-                        tension: 0.4, // Smooths the curve
-                        pointBackgroundColor: '#fff',
+                        tension: 0.4,
+                        pointBackgroundColor: isDark ? '#1e293b' : '#fff',
                         pointBorderColor: colors.success,
                         pointBorderWidth: 2,
                         pointRadius: 4,
@@ -1403,12 +1427,11 @@
                 }
             });
 
-            // 4. DEADLINE TREND (Changed to Smooth Rounded Bar Chart)
+            // 4. DEADLINE TREND (Bar - Cyan Theme)
             if (document.getElementById('chartTimeline')) {
                 const ctxT = document.getElementById('chartTimeline').getContext('2d');
                 if (charts.timeline) charts.timeline.destroy();
 
-                // Chronological Sort
                 const roundedMonths = Object.keys(tCounts).sort();
                 const displayLabels = roundedMonths.map(k => {
                     const [y, m] = k.split('-');
@@ -1416,10 +1439,9 @@
                     return date.toLocaleString('default', { month: 'short', year: '2-digit' });
                 });
 
-                // Indigo/Purple Gradient
                 let gradT = ctxT.createLinearGradient(0, 0, 0, 300);
-                gradT.addColorStop(0, '#6366f1'); // Indigo
-                gradT.addColorStop(1, 'rgba(99, 102, 241, 0.2)');
+                gradT.addColorStop(0, colors.cyan);
+                gradT.addColorStop(1, isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(8, 145, 178, 0.1)');
 
                 charts.timeline = new Chart(ctxT, {
                     type: 'bar',
@@ -1429,9 +1451,9 @@
                             label: 'Deadlines',
                             data: roundedMonths.map(k => tCounts[k]),
                             backgroundColor: gradT,
-                            borderColor: '#6366f1',
+                            borderColor: colors.cyan,
                             borderWidth: 1,
-                            borderRadius: 8, // Smooth rounded bars
+                            borderRadius: 8,
                             barPercentage: 0.5
                         }]
                     },
