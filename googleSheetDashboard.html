@@ -689,6 +689,27 @@
         </nav>
 
         <div class="container">
+            
+            <div class="controls-bar">
+                <div class="search-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" class="form-input" placeholder="Search project, app, owner..."
+                        onkeyup="filterData()">
+                </div>
+                <div id="dynamic-filters" class="flex gap-2 flex-wrap"></div>
+
+                <!-- Date Range Filter -->
+                <div class="date-filter-box">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Target Date:</span>
+                    <input type="date" id="dateStart" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                    <span style="color: var(--text-light);">-</span>
+                    <input type="date" id="dateEnd" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                </div>
+
+                <button class="btn btn-white" onclick="resetFilters()" style="margin-left: auto;">Reset Filters</button>
+            </div>
             <div class="grid-stats">
                 <div class="card">
                     <div class="stat-label">Total Tasks</div>
@@ -735,27 +756,6 @@
                         <canvas id="chartTimeline"></canvas>
                     </div>
                 </div>
-            </div>
-
-            <div class="controls-bar">
-                <div class="search-wrapper">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="searchInput" class="form-input" placeholder="Search project, app, owner..."
-                        onkeyup="filterData()">
-                </div>
-                <div id="dynamic-filters" class="flex gap-2 flex-wrap"></div>
-
-                <!-- Date Range Filter -->
-                <div class="date-filter-box">
-                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Target Date:</span>
-                    <input type="date" id="dateStart" class="form-input" style="width: auto; padding: 0.4rem;"
-                        onchange="filterData()">
-                    <span style="color: var(--text-light);">-</span>
-                    <input type="date" id="dateEnd" class="form-input" style="width: auto; padding: 0.4rem;"
-                        onchange="filterData()">
-                </div>
-
-                <button class="btn btn-white" onclick="resetFilters()" style="margin-left: auto;">Reset Filters</button>
             </div>
 
             <div class="table-container">
