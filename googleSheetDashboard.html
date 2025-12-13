@@ -221,8 +221,10 @@
         /* --- CHARTS --- */
         .grid-charts {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: 1fr 1fr;
+            /* Balanced 2x2 grid */
             gap: 1.5rem;
+            margin-bottom: 2rem;
         }
 
         @media (max-width: 1024px) {
@@ -605,6 +607,19 @@
                         <canvas id="chartStatus"></canvas>
                     </div>
                 </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Tasks by Application</h4>
+                    <div class="chart-container">
+                        <canvas id="chartApps"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Monthly Deadline Trend
+                    </h4>
+                    <div class="chart-container">
+                        <canvas id="chartTimeline"></canvas>
+                    </div>
+                </div>
             </div>
 
             <div class="controls-bar">
@@ -677,7 +692,7 @@
         let API_URL = "";
         let rawData = [];
         let headers = [];
-        let charts = { owner: null, status: null };
+        let charts = { owner: null, status: null, apps: null, timeline: null };
         let editingRow = null;
 
         // View State
@@ -1206,25 +1221,153 @@
         function updateCharts(data) {
             const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
             const keyOwner = headers.find(h => h.toUpperCase() === 'OWNER');
+            const keyApp = headers.find(h => h.toUpperCase() === 'APP');
+            const keyDate = headers.find(h => h.toUpperCase() === 'TARGET DATE');
 
-            if (!keyStatus || !keyOwner) return;
+            // --- DATA AGGREGATION ---
+            const sCounts = {}, oCounts = {}, aCounts = {}, tCounts = {};
 
-            const sCounts = {}, oCounts = {};
             data.forEach(r => {
                 const s = r[keyStatus] || 'Unknown';
                 const o = r[keyOwner] || 'Unassigned';
                 sCounts[s] = (sCounts[s] || 0) + 1;
                 oCounts[o] = (oCounts[o] || 0) + 1;
+
+                if (keyApp) {
+                    const a = r[keyApp] || 'Other';
+                    aCounts[a] = (aCounts[a] || 0) + 1;
+                }
+
+                if (keyDate && r[keyDate]) {
+                    try {
+                        const d = new Date(r[keyDate]);
+                        if (!isNaN(d.getTime())) {
+                            // Sortable format YYYY-MM for logic, display Short Month later
+                            const sortKey = d.toISOString().slice(0, 7); // 2025-10
+                            tCounts[sortKey] = (tCounts[sortKey] || 0) + 1;
+                        }
+                    } catch (e) { }
+                }
             });
 
-            const chartOptions = { responsive: true, maintainAspectRatio: false };
+            // --- STYLING & CONFIG ---
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-            // Owner Chart
-            const ctxO = document.getElementById('chartOwner').getContext('2d');
+            // Professional Palettes
+            const colors = {
+                primary: '#6366f1', // Indigo 500
+                success: '#10b981', // Emerald 500
+                warning: '#f59e0b', // Amber 500
+                danger: '#ef4444', // Red 500
+                info: '#3b82f6', // Blue 500
+                purple: '#8b5cf6', // Violet 500
+                pink: '#ec4899', // Pink 500
+                cyan: '#06b6d4', // Cyan 500
+                slate: '#64748b'  // Slate 500
+            };
+
+            const palette = Object.values(colors);
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? '#334155' : '#f1f5f9';
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false, // Cleaner look without default legend
+                    },
+                    tooltip: {
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        titleColor: isDark ? '#f8fafc' : '#0f172a',
+                        bodyColor: isDark ? '#cbd5e1' : '#475569',
+                        borderColor: isDark ? '#334155' : '#e2e8f0',
+                        borderWidth: 1,
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        usePointStyle: true,
+                    }
+                },
+                layout: { padding: 10 }
+            };
+
+            // 1. STATUS BREAKDOWN (Classic Style)
+            if (charts.status) charts.status.destroy();
+            const ctxS = document.getElementById('chartStatus').getContext('2d');
+            charts.status = new Chart(ctxS, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sCounts),
+                    datasets: [{
+                        data: Object.values(sCounts),
+                        // Classic Bright Colors
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#cbd5e1', '#8b5cf6', '#ec4899', '#06b6d4'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: textColor }
+                        }
+                    },
+                    layout: { padding: 10 }
+                }
+            });
+
+            // 2. APPS DISTRIBUTION (Vertical Bar - Gradient)
+            if (document.getElementById('chartApps')) {
+                if (charts.apps) charts.apps.destroy();
+                const ctxA = document.getElementById('chartApps').getContext('2d');
+
+                // Create Gradient
+                let gradA = ctxA.createLinearGradient(0, 0, 0, 300);
+                gradA.addColorStop(0, colors.purple);
+                gradA.addColorStop(1, 'rgba(139, 92, 246, 0.2)');
+
+                charts.apps = new Chart(ctxA, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(aCounts),
+                        datasets: [{
+                            label: 'Tasks',
+                            data: Object.values(aCounts),
+                            backgroundColor: gradA,
+                            borderColor: colors.purple,
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: gridColor, drawBorder: false },
+                                ticks: { color: textColor, font: { size: 11 } }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: textColor, font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3. OWNER WORKLOAD (Matches Timeline Style - Green Area Chart)
             if (charts.owner) charts.owner.destroy();
+            const ctxO = document.getElementById('chartOwner').getContext('2d');
 
-            let grad = ctxO.createLinearGradient(0, 0, 0, 300);
-            grad.addColorStop(0, 'rgba(37,99,235,0.3)'); grad.addColorStop(1, 'rgba(37,99,235,0.0)');
+            // Create Green Gradient (Same as Timeline)
+            let gradO = ctxO.createLinearGradient(0, 0, 0, 300);
+            gradO.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+            gradO.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
             charts.owner = new Chart(ctxO, {
                 type: 'line',
@@ -1233,34 +1376,81 @@
                     datasets: [{
                         label: 'Tasks',
                         data: Object.values(oCounts),
-                        borderColor: '#2563eb', backgroundColor: grad,
-                        fill: true, tension: 0.3, pointRadius: 4
+                        borderColor: colors.success,
+                        borderWidth: 2,
+                        backgroundColor: gradO,
+                        fill: true,
+                        tension: 0.4, // Smooths the curve
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: colors.success,
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
-                    ...chartOptions, plugins: { legend: { display: false } }, scales: {
+                    ...commonOptions,
+                    scales: {
                         y: {
-                            beginAtZero: true
-                        }, x: { grid: { display: false } }
+                            grid: { color: gridColor, drawBorder: false, borderDash: [5, 5] },
+                            ticks: { color: textColor }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor }
+                        }
                     }
                 }
             });
 
-            // Status Chart
-            const ctxS = document.getElementById('chartStatus').getContext('2d');
-            if (charts.status) charts.status.destroy();
-            charts.status = new Chart(ctxS, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(sCounts),
-                    datasets: [{
-                        data: Object.values(sCounts),
-                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#cbd5e1'],
-                        borderWidth: 0
-                    }]
-                },
-                options: { ...chartOptions, plugins: { legend: { position: 'right' } } }
-            });
+            // 4. DEADLINE TREND (Changed to Smooth Rounded Bar Chart)
+            if (document.getElementById('chartTimeline')) {
+                const ctxT = document.getElementById('chartTimeline').getContext('2d');
+                if (charts.timeline) charts.timeline.destroy();
+
+                // Chronological Sort
+                const roundedMonths = Object.keys(tCounts).sort();
+                const displayLabels = roundedMonths.map(k => {
+                    const [y, m] = k.split('-');
+                    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+                    return date.toLocaleString('default', { month: 'short', year: '2-digit' });
+                });
+
+                // Indigo/Purple Gradient
+                let gradT = ctxT.createLinearGradient(0, 0, 0, 300);
+                gradT.addColorStop(0, '#6366f1'); // Indigo
+                gradT.addColorStop(1, 'rgba(99, 102, 241, 0.2)');
+
+                charts.timeline = new Chart(ctxT, {
+                    type: 'bar',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [{
+                            label: 'Deadlines',
+                            data: roundedMonths.map(k => tCounts[k]),
+                            backgroundColor: gradT,
+                            borderColor: '#6366f1',
+                            borderWidth: 1,
+                            borderRadius: 8, // Smooth rounded bars
+                            barPercentage: 0.5
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: gridColor, drawBorder: false },
+                                ticks: { color: textColor }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: textColor }
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         function buildFilters() {
