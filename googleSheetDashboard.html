@@ -521,6 +521,116 @@
             color: white;
             border-color: var(--primary);
         }
+
+        /* --- RESPONSIVE MOBILE STYLES --- */
+        .date-filter-box {
+            background: white;
+            padding: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                height: auto;
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .brand {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .brand .live-text {
+                display: none;
+            }
+
+            nav .flex.items-center.gap-2 {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            nav .btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.85rem;
+                flex-grow: 1;
+                justify-content: center;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .search-wrapper {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .date-filter-box {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .date-filter-box input {
+                width: 100% !important;
+            }
+
+            .date-filter-box span {
+                text-align: center;
+                display: block;
+                margin-bottom: 4px;
+            }
+
+            #dynamic-filters {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            #dynamic-filters select {
+                width: 100% !important;
+                min-width: unset !important;
+            }
+
+            /* Push reset button to bottom and full width */
+            .controls-bar .btn-white {
+                width: 100%;
+                margin-left: 0 !important;
+                margin-top: 0.5rem;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            /* Table Adjustments */
+            th,
+            td {
+                padding: 0.8rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            /* Form Footer Mobile */
+            .form-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .form-footer .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 
@@ -555,7 +665,8 @@
         <nav class="flex items-center justify-between">
             <div class="brand">
                 <i class="fa-solid fa-layer-group"></i>
-                <span>Project Dashboard <span style="font-weight: 400; color: #94a3b8; font-size: 0.9rem;">| Live
+                <span>Project Dashboard <span class="live-text"
+                        style="font-weight: 400; color: #94a3b8; font-size: 0.9rem;">| Live
                         Sync</span></span>
             </div>
             <div class="flex items-center gap-2">
@@ -635,8 +746,7 @@
                 <div id="dynamic-filters" class="flex gap-2 flex-wrap"></div>
 
                 <!-- Date Range Filter -->
-                <div class="flex items-center gap-2 date-filter-box"
-                    style="background: white; padding: 0.4rem; border-radius: 8px; border: 1px solid var(--border);">
+                <div class="date-filter-box">
                     <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Target Date:</span>
                     <input type="date" id="dateStart" class="form-input" style="width: auto; padding: 0.4rem;"
                         onchange="filterData()">
