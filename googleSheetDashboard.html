@@ -555,6 +555,18 @@
                         onkeyup="filterData()">
                 </div>
                 <div id="dynamic-filters" class="flex gap-2 flex-wrap"></div>
+
+                <!-- Date Range Filter -->
+                <div class="flex items-center gap-2"
+                    style="background: white; padding: 0.4rem; border-radius: 8px; border: 1px solid var(--border);">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Target Date:</span>
+                    <input type="date" id="dateStart" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                    <span style="color: var(--text-light);">-</span>
+                    <input type="date" id="dateEnd" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                </div>
+
                 <button class="btn btn-white" onclick="resetFilters()" style="margin-left: auto;">Reset Filters</button>
             </div>
 
@@ -769,6 +781,32 @@
                     const rowStr = Object.values(row).join(' ').toLowerCase();
                     if (!rowStr.includes(search)) return false;
                 }
+
+                // 3. Date Range Filter (Target Date)
+                const dateStart = document.getElementById('dateStart').value;
+                const dateEnd = document.getElementById('dateEnd').value;
+                if (dateStart || dateEnd) {
+                    const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                    if (keyTarget) {
+                        const rowDateStr = row[keyTarget];
+                        if (!rowDateStr) return false; // Date required if filtering by date
+
+                        const rDate = new Date(rowDateStr);
+                        if (isNaN(rDate.getTime())) return false; // Invalid date in row
+
+                        if (dateStart) {
+                            const dStart = new Date(dateStart);
+                            if (rDate < dStart) return false;
+                        }
+                        if (dateEnd) {
+                            const dEnd = new Date(dateEnd);
+                            // Set end date to end of day to be inclusive
+                            dEnd.setHours(23, 59, 59, 999);
+                            if (rDate > dEnd) return false;
+                        }
+                    }
+                }
+
                 return true;
             });
 
@@ -826,7 +864,7 @@
                     th.style.width = '140px';
                 } else if (hUpper === 'DELIVERABLES' || hUpper === 'REMARKS') {
                     th.style.minWidth = '500px';
-                } else if (hUpper === 'PROJECT') {
+                } else if (hUpper === 'PROJECT' || hUpper === 'APP') {
                     th.style.minWidth = '220px';
                 }
                 // --------------------------------
@@ -1211,6 +1249,8 @@
         function resetFilters() {
             document.getElementById('searchInput').value = '';
             document.querySelectorAll('#dynamic-filters select').forEach(s => s.selectedIndex = 0);
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
             currentPage = 1;
             sortCol = null;
             filterData();
