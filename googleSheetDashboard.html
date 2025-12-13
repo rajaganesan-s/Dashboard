@@ -32,6 +32,15 @@
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
+        :root[data-theme="dark"] {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-body);
@@ -363,6 +372,53 @@
             background: #cbd5e1;
         }
 
+        :root[data-theme="dark"] th {
+            background: #334155;
+            border-bottom-color: #475569;
+        }
+
+        :root[data-theme="dark"] th:hover {
+            background: #475569;
+        }
+
+        :root[data-theme="dark"] tbody tr:nth-child(even) {
+            background-color: #1e293b;
+            /* Match card bg or slightly different */
+        }
+
+        :root[data-theme="dark"] tbody tr:nth-last-child(odd) {
+            background-color: #1a2436;
+            /* Slightly darker */
+        }
+
+        :root[data-theme="dark"] tr:hover td {
+            background-color: #334155;
+        }
+
+        /* Dark mode specific adjustments for inputs and date filters */
+        :root[data-theme="dark"] .form-input,
+        :root[data-theme="dark"] .form-input-field,
+        :root[data-theme="dark"] .page-btn {
+            background-color: #0f172a;
+            color: #f8fafc;
+            border-color: #334155;
+        }
+
+        :root[data-theme="dark"] .btn-white {
+            background-color: #1e293b;
+            color: #f8fafc;
+            border-color: #334155;
+        }
+
+        :root[data-theme="dark"] .btn-white:hover {
+            background-color: #334155;
+        }
+
+        :root[data-theme="dark"] .date-filter-box {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
         td {
             padding: 1rem 1.5rem;
             border-bottom: 1px solid var(--border);
@@ -500,6 +556,9 @@
                 <button class="btn btn-white" onclick="fetchData()" title="Reload Data">
                     <i class="fa-solid fa-rotate"></i> Sync
                 </button>
+                <button class="btn btn-white" onclick="toggleTheme()" title="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
                 <button class="btn btn-primary" onclick="showAddScreen()">
                     <i class="fa-solid fa-plus"></i> Add Task
                 </button>
@@ -557,7 +616,7 @@
                 <div id="dynamic-filters" class="flex gap-2 flex-wrap"></div>
 
                 <!-- Date Range Filter -->
-                <div class="flex items-center gap-2"
+                <div class="flex items-center gap-2 date-filter-box"
                     style="background: white; padding: 0.4rem; border-radius: 8px; border: 1px solid var(--border);">
                     <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Target Date:</span>
                     <input type="date" id="dateStart" class="form-input" style="width: auto; padding: 0.4rem;"
@@ -629,6 +688,10 @@
 
         // --- INITIALIZATION ---
         window.onload = function () {
+            // Init Theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+
             const stored = localStorage.getItem("sheetApiUrl");
             if (stored) {
                 API_URL = stored;
@@ -636,6 +699,21 @@
                 fetchData();
             }
         };
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            setTheme(target);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            }
+        }
 
         function connectToSheet() {
             const input = document.getElementById('apiUrlInput').value.trim();
