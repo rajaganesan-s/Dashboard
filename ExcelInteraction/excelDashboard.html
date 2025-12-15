@@ -11,44 +11,112 @@
     <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* --- CSS VARIABLES & RESET --- */
         * {
             box-sizing: border-box;
             outline: none;
+            -webkit-font-smoothing: antialiased;
         }
 
         :root {
-            --primary: #107c41;
-            /* Excel Green */
-            --primary-dark: #0c5e31;
+            /* Light Theme - Professional Palette */
+            --primary: #4f46e5;
+            /* Indigo 600 */
+            --primary-hover: #4338ca;
             --success: #10b981;
+            /* Emerald 500 */
+            --success-bg: #ecfdf5;
             --warning: #f59e0b;
+            /* Amber 500 */
+            --warning-bg: #fffbeb;
             --danger: #ef4444;
-            --text-main: #0f172a;
-            --text-light: #64748b;
-            --bg-body: #f1f5f9;
+            /* Red 500 */
+            --danger-bg: #fef2f2;
+            --info: #3b82f6;
+            /* Blue 500 */
+            --info-bg: #eff6ff;
+
+            --bg-body: #f8fafc;
+            /* Slate 50 */
             --bg-card: #ffffff;
+            --text-main: #0f172a;
+            /* Slate 900 */
+            --text-secondary: #334155;
+            /* Slate 700 */
+            --text-light: #64748b;
+            /* Slate 500 */
             --border: #e2e8f0;
-            --radius: 12px;
+            /* Slate 200 */
+            --divider: #f1f5f9;
+
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+            --font-main: 'Inter', sans-serif;
+            --transition: all 0.2s ease-in-out;
         }
 
         :root[data-theme="dark"] {
+            /* Dark Theme - Deep & Sleek */
+            --primary: #6366f1;
+            /* Indigo 500 */
+            --primary-hover: #818cf8;
+            --success: #34d399;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --warning: #fbbf24;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --danger: #f87171;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --info: #60a5fa;
+            --info-bg: rgba(59, 130, 246, 0.1);
+
             --bg-body: #0f172a;
+            /* Slate 900 */
             --bg-card: #1e293b;
-            --text-main: #f8fafc;
+            /* Slate 800 */
+            --text-main: #f1f5f9;
+            --text-secondary: #cbd5e1;
             --text-light: #94a3b8;
             --border: #334155;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --divider: #1e293b;
+
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            color-scheme: dark;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        :root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: #475569;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: var(--font-main);
             background-color: var(--bg-body);
             color: var(--text-main);
             margin: 0;
             padding-bottom: 60px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* --- UTILITIES --- */
@@ -72,19 +140,25 @@
             gap: 0.5rem;
         }
 
+        .gap-4 {
+            gap: 1rem;
+        }
+
         /* --- BUTTONS --- */
         .btn {
-            padding: 0.6rem 1rem;
-            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-md);
             border: 1px solid transparent;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: var(--transition);
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-sm);
+            letter-spacing: 0.01em;
         }
 
         .btn:active {
@@ -98,18 +172,20 @@
         }
 
         .btn-primary:hover {
-            background: var(--primary-dark);
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
 
         .btn-white {
-            background: white;
+            background: var(--bg-card);
             color: var(--text-main);
             border-color: var(--border);
         }
 
         .btn-white:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
+            background: var(--divider);
+            border-color: var(--text-light);
         }
 
         .btn-success {
@@ -119,7 +195,8 @@
         }
 
         .btn-success:hover {
-            background: #059669;
+            opacity: 0.9;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
         .btn-danger-ghost {
@@ -130,23 +207,25 @@
         }
 
         .btn-danger-ghost:hover {
-            background: #fef2f2;
+            background: var(--danger-bg);
         }
 
         /* --- TABS --- */
         .tab-group {
             display: flex;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid var(--border);
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            gap: 2rem;
         }
 
         .tab {
-            padding: 0.8rem 1.2rem;
+            padding: 0.8rem 0.5rem;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 500;
             color: var(--text-light);
             border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
+            margin-bottom: -1px;
+            transition: var(--transition);
         }
 
         .tab.active {
@@ -154,30 +233,41 @@
             border-bottom-color: var(--primary);
         }
 
+        .tab:hover:not(.active) {
+            color: var(--text-main);
+        }
+
         .file-list {
             max-height: 200px;
             overflow-y: auto;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             margin-bottom: 1rem;
             text-align: left;
+            background: var(--bg-card);
         }
 
         .file-item {
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1rem;
             border-bottom: 1px solid var(--border);
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.8rem;
+            color: var(--text-main);
+            transition: var(--transition);
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
         }
 
         .file-item:hover {
-            background-color: #f1f5f9;
+            background-color: var(--divider);
         }
 
         .file-item i {
-            color: var(--primary);
+            color: var(--text-light);
         }
 
         /* --- LOGIN SCREEN --- */
@@ -190,104 +280,118 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(10px);
         }
 
         .login-box {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            background: var(--bg-card);
+            padding: 3rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
             width: 100%;
-            max-width: 480px;
+            max-width: 500px;
             text-align: center;
             position: relative;
         }
 
         .file-drop-area {
             border: 2px dashed var(--border);
-            border-radius: 12px;
-            padding: 2rem;
+            border-radius: var(--radius-lg);
+            padding: 3rem 2rem;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 1.5rem;
+            transition: var(--transition);
+            margin-bottom: 2rem;
+            background: var(--bg-body);
         }
 
         .file-drop-area:hover,
         .file-drop-area.dragover {
             border-color: var(--primary);
-            background: rgba(16, 124, 65, 0.05);
+            background: var(--info-bg);
         }
 
         /* --- LAYOUT --- */
         nav {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border);
-            height: 70px;
-            padding: 0 1.5rem;
+            height: 72px;
+            padding: 0 2rem;
             position: sticky;
             top: 0;
             z-index: 50;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.3s ease;
         }
 
         .brand {
-            font-size: 1.25rem;
+            font-size: 1.35rem;
             font-weight: 700;
             color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            letter-spacing: -0.02em;
         }
 
         .brand i {
-            color: var(--primary);
-            font-size: 1.5rem;
+            color: #107c41;
+            font-size: 1.6rem;
         }
 
         .container {
-            width: 90%;
-            max-width: 1920px;
+            width: 92%;
+            max-width: 1600px;
             margin: 2rem auto;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 2rem;
         }
 
         /* --- METRICS CARDS --- */
         .grid-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 1.5rem;
         }
 
         .card {
             background: var(--bg-card);
-            border-radius: var(--radius);
+            border-radius: var(--radius-lg);
             padding: 1.5rem;
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
         }
 
         .stat-label {
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-light);
+            margin-bottom: 0.5rem;
         }
 
         .stat-value {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-top: 0.25rem;
+            font-size: 2.2rem;
+            font-weight: 700;
             color: var(--text-main);
+            letter-spacing: -0.02em;
         }
 
         /* --- CHARTS --- */
         .grid-charts {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -300,15 +404,15 @@
 
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 320px;
             width: 100%;
         }
 
         /* --- TABLE & CONTROLS --- */
         .controls-bar {
             background: var(--bg-card);
-            padding: 1rem;
-            border-radius: var(--radius);
+            padding: 1.2rem;
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
             display: flex;
@@ -325,7 +429,7 @@
 
         .search-wrapper i {
             position: absolute;
-            left: 12px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-light);
@@ -333,11 +437,23 @@
 
         .form-input {
             width: 100%;
-            padding: 0.6rem 0.6rem 0.6rem 2.4rem;
+            padding: 0.65rem 1rem 0.65rem 2.6rem;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             font-size: 0.95rem;
-            transition: border 0.2s;
+            background: var(--bg-body);
+            color: var(--text-main);
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            background: var(--bg-card);
+        }
+
+        select.form-input {
+            padding-left: 1rem;
         }
 
         input[type="file"] {
@@ -350,12 +466,16 @@
             align-items: center;
             gap: 1rem;
             margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--divider);
         }
 
         .page-header h2 {
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.75rem;
+            font-weight: 700;
             color: var(--text-main);
+            letter-spacing: -0.02em;
         }
 
         .form-card {
@@ -372,22 +492,26 @@
             display: block;
             font-size: 0.9rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--text-main);
+            margin-bottom: 0.6rem;
+            color: var(--text-secondary);
         }
 
         .form-input-field {
             width: 100%;
-            padding: 0.8rem;
+            padding: 0.8rem 1rem;
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             font-size: 1rem;
             font-family: inherit;
+            background: var(--bg-body);
+            color: var(--text-main);
+            transition: var(--transition);
         }
 
         .form-input-field:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(16, 124, 65, 0.1);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            background: var(--bg-card);
         }
 
         .form-footer {
@@ -402,16 +526,15 @@
         /* Table Styling */
         .table-container {
             background: var(--bg-card);
-            border-radius: var(--radius);
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border);
             overflow: hidden;
             box-shadow: var(--shadow);
-            margin-top: 1rem;
         }
 
         .table-scroll {
             overflow-x: auto;
-            max-height: 650px;
+            max-height: 700px;
         }
 
         table {
@@ -422,97 +545,80 @@
         }
 
         th {
-            background: #e2e8f0;
-            padding: 1.2rem 1.5rem;
-            font-size: 0.8rem;
+            background: var(--bg-body);
+            padding: 1rem 1.5rem;
+            font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: var(--text-main);
-            border-bottom: 2px solid #cbd5e1;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
             position: sticky;
             top: 0;
             z-index: 10;
             cursor: pointer;
             user-select: none;
             white-space: nowrap;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         th:hover {
-            background: #cbd5e1;
-        }
-
-        :root[data-theme="dark"] th {
-            background: #334155;
-            border-bottom-color: #475569;
-        }
-
-        :root[data-theme="dark"] th:hover {
-            background: #475569;
-        }
-
-        :root[data-theme="dark"] tbody tr:nth-child(even) {
-            background-color: #1e293b;
-        }
-
-        :root[data-theme="dark"] tbody tr:nth-last-child(odd) {
-            background-color: #1a2436;
-        }
-
-        :root[data-theme="dark"] tr:hover td {
-            background-color: #334155;
+            background: var(--divider);
+            color: var(--primary);
         }
 
         td {
             padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--divider);
             font-size: 0.95rem;
             vertical-align: middle;
-            color: var(--text-main);
+            color: var(--text-secondary);
+            transition: background-color 0.1s;
         }
 
-        tbody tr:nth-child(even) {
-            background-color: #f8fafc;
+        tr:last-child td {
+            border-bottom: none;
         }
 
-        tr:hover td {
-            background-color: #f1f5f9;
+        tbody tr:hover td {
+            background-color: var(--bg-body);
         }
 
         /* Status Badges */
         .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.8rem;
+            border-radius: 9999px;
             font-size: 0.75rem;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.02em;
+            line-height: 1.2;
         }
 
         .badge-success {
-            background: #dcfce7;
-            color: #166534;
+            background: var(--success-bg);
+            color: var(--success);
         }
 
         .badge-info {
-            background: #dbeafe;
-            color: #1e40af;
+            background: var(--info-bg);
+            color: var(--info);
         }
 
         .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
+            background: var(--warning-bg);
+            color: var(--warning);
         }
 
         .badge-gray {
-            background: #f1f5f9;
-            color: #475569;
+            background: var(--divider);
+            color: var(--text-light);
         }
 
         /* Loader */
         .loader-line {
-            height: 3px;
+            height: 4px;
             width: 100%;
             position: fixed;
             top: 0;
@@ -537,38 +643,58 @@
         .pagination {
             display: flex;
             justify-content: center;
-            gap: 5px;
-            margin-top: 1rem;
+            gap: 8px;
+            margin-top: 1.5rem;
         }
 
         .page-btn {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
+            border-radius: var(--radius-md);
             border: 1px solid var(--border);
-            background: white;
+            background: var(--bg-card);
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .page-btn:hover {
+            background: var(--divider);
         }
 
         .page-btn.active {
             background: var(--primary);
             color: white;
             border-color: var(--primary);
+            box-shadow: 0 4px 6px rgba(99, 102, 241, 0.4);
         }
 
         /* --- RESPONSIVE --- */
         .date-filter-box {
-            background: white;
-            padding: 0.4rem;
-            border-radius: 8px;
+            background: var(--bg-body);
+            padding: 0.4rem 0.8rem;
+            border-radius: var(--radius-md);
             border: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.8rem;
+        }
+
+        .date-filter-box span {
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+
+        .date-filter-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: inherit;
         }
 
         @media (max-width: 768px) {
@@ -581,6 +707,7 @@
 
             .controls-bar {
                 flex-direction: column;
+                align-items: stretch;
             }
 
             .search-wrapper,
@@ -591,7 +718,21 @@
             }
 
             .chart-container {
-                height: 250px;
+                height: 260px;
+            }
+
+            #dynamic-filters {
+                flex-direction: column;
+            }
+
+            .date-filter-box {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .date-filter-box input {
+                width: 100%;
             }
         }
     </style>
@@ -1419,7 +1560,7 @@
         function buildFilters() {
             const container = document.getElementById('dynamic-filters');
             container.innerHTML = '';
-            const viableFilters = ['APP', 'STATUS', 'OWNER', 'PROJECT'];
+            const viableFilters = ['APP', 'STATUS', 'OWNER'];
 
             viableFilters.forEach(colName => {
                 const realHeader = headers.find(h => h.toUpperCase() === colName);
@@ -1665,42 +1806,229 @@
             const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
             const keyOwner = headers.find(h => h.toUpperCase() === 'OWNER');
             const keyApp = headers.find(h => h.toUpperCase() === 'APP');
+            const keyDate = headers.find(h => h.toUpperCase() === 'TARGET DATE');
 
-            const sCounts = {}, oCounts = {}, aCounts = {};
+            // --- DATA AGGREGATION ---
+            const sCounts = {}, oCounts = {}, aCounts = {}, tCounts = {};
+
             data.forEach(r => {
                 const s = r[keyStatus] || 'Unknown';
                 const o = r[keyOwner] || 'Unassigned';
                 const a = r[keyApp] || 'Other';
+
                 sCounts[s] = (sCounts[s] || 0) + 1;
                 oCounts[o] = (oCounts[o] || 0) + 1;
                 aCounts[a] = (aCounts[a] || 0) + 1;
+
+                if (keyDate && r[keyDate]) {
+                    try {
+                        let d;
+                        if (typeof r[keyDate] === 'number') d = new Date((r[keyDate] - (25567 + 2)) * 86400 * 1000);
+                        else d = new Date(r[keyDate]);
+
+                        if (!isNaN(d.getTime())) {
+                            const sortKey = d.toISOString().slice(0, 7); // 2025-10
+                            tCounts[sortKey] = (tCounts[sortKey] || 0) + 1;
+                        }
+                    } catch (e) { }
+                }
             });
 
+            // --- STYLING & CONFIG ---
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const colors = isDark ? { primary: '#818cf8', success: '#34d399', warning: '#fbbf24', danger: '#f87171', info: '#60a5fa', purple: '#a78bfa', pink: '#f472b6', cyan: '#22d3ee', slate: '#94a3b8' }
-                : { primary: '#4f46e5', success: '#059669', warning: '#d97706', danger: '#dc2626', info: '#2563eb', purple: '#7c3aed', pink: '#db2777', cyan: '#0891b2', slate: '#475569' };
-            const textColor = isDark ? '#e2e8f0' : '#64748b';
 
+            // Distinct Palette for Professional Look
+            const palette = {
+                indigo: isDark ? '#818cf8' : '#4f46e5',
+                blue: isDark ? '#60a5fa' : '#3b82f6',
+                emerald: isDark ? '#34d399' : '#10b981',
+                amber: isDark ? '#fbbf24' : '#f59e0b',
+                rose: isDark ? '#fb7185' : '#e11d48',
+                violet: isDark ? '#a78bfa' : '#7c3aed',
+                cyan: isDark ? '#22d3ee' : '#0891b2',
+                slate: isDark ? '#94a3b8' : '#64748b',
+                white: '#ffffff',
+                bg: isDark ? '#1e293b' : '#ffffff'
+            };
+
+            const textColor = isDark ? '#e2e8f0' : '#475569';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: isDark ? '#0f172a' : '#1e293b',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        usePointStyle: true,
+                        titleFont: { family: 'Inter', size: 14, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 13 }
+                    }
+                },
+                layout: { padding: 10 }
+            };
+
+            // 1. STATUS BREAKDOWN
             if (charts.status) charts.status.destroy();
-            charts.status = new Chart(document.getElementById('chartStatus'), {
+            const ctxS = document.getElementById('chartStatus').getContext('2d');
+            charts.status = new Chart(ctxS, {
                 type: 'doughnut',
-                data: { labels: Object.keys(sCounts), datasets: [{ data: Object.values(sCounts), backgroundColor: [colors.success, colors.info, colors.warning, colors.danger, colors.slate, colors.purple], borderWidth: 0 }] },
-                options: { sensitive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: textColor } } } }
+                data: {
+                    labels: Object.keys(sCounts),
+                    datasets: [{
+                        data: Object.values(sCounts),
+                        backgroundColor: [palette.emerald, palette.blue, palette.amber, palette.rose, palette.slate, palette.violet, palette.cyan, palette.indigo],
+                        borderWidth: 0,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: textColor,
+                                font: { family: 'Inter', size: 11 },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    },
+                    layout: { padding: 10 }
+                }
             });
 
+            // 2. APPS DISTRIBUTION
             if (charts.apps) charts.apps.destroy();
-            charts.apps = new Chart(document.getElementById('chartApps'), {
+            const ctxA = document.getElementById('chartApps').getContext('2d');
+            let gradA = ctxA.createLinearGradient(0, 0, 0, 300);
+            gradA.addColorStop(0, palette.violet);
+            gradA.addColorStop(1, isDark ? 'rgba(167, 139, 250, 0.1)' : 'rgba(124, 58, 237, 0.1)');
+
+            charts.apps = new Chart(ctxA, {
                 type: 'bar',
-                data: { labels: Object.keys(aCounts), datasets: [{ label: 'Tasks', data: Object.values(aCounts), backgroundColor: colors.purple, borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor } }, y: { ticks: { color: textColor } } }, plugins: { legend: { display: false } } }
+                data: {
+                    labels: Object.keys(aCounts),
+                    datasets: [{
+                        label: 'Tasks',
+                        data: Object.values(aCounts),
+                        backgroundColor: gradA,
+                        borderColor: palette.violet,
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: gridColor, drawBorder: false },
+                            ticks: { color: textColor, font: { family: 'Inter' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { family: 'Inter' } }
+                        }
+                    }
+                }
             });
 
+            // 3. OWNER WORKLOAD (Line/Area)
             if (charts.owner) charts.owner.destroy();
-            charts.owner = new Chart(document.getElementById('chartOwner'), {
-                type: 'bar',
-                data: { labels: Object.keys(oCounts), datasets: [{ label: 'Tasks', data: Object.values(oCounts), backgroundColor: colors.success, borderRadius: 4 }] },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor } }, y: { ticks: { color: textColor } } }, plugins: { legend: { display: false } } }
+            const ctxO = document.getElementById('chartOwner').getContext('2d');
+            let gradO = ctxO.createLinearGradient(0, 0, 0, 300);
+            gradO.addColorStop(0, isDark ? 'rgba(52, 211, 153, 0.3)' : 'rgba(16, 185, 129, 0.2)');
+            gradO.addColorStop(1, isDark ? 'rgba(52, 211, 153, 0.0)' : 'rgba(16, 185, 129, 0.0)');
+
+            charts.owner = new Chart(ctxO, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(oCounts),
+                    datasets: [{
+                        label: 'Tasks',
+                        data: Object.values(oCounts),
+                        borderColor: palette.emerald,
+                        borderWidth: 2,
+                        backgroundColor: gradO,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: palette.bg,
+                        pointBorderColor: palette.emerald,
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        y: {
+                            grid: { color: gridColor, drawBorder: false, borderDash: [5, 5] },
+                            ticks: { color: textColor, font: { family: 'Inter' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { family: 'Inter' } }
+                        }
+                    }
+                }
             });
+
+            // 4. DEADLINE TREND
+            if (document.getElementById('chartTimeline')) {
+                const ctxT = document.getElementById('chartTimeline').getContext('2d');
+                if (charts.timeline) charts.timeline.destroy();
+
+                const roundedMonths = Object.keys(tCounts).sort();
+                const displayLabels = roundedMonths.map(k => {
+                    const [y, m] = k.split('-');
+                    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+                    return date.toLocaleString('default', { month: 'short', year: '2-digit' });
+                });
+
+                let gradT = ctxT.createLinearGradient(0, 0, 0, 300);
+                gradT.addColorStop(0, palette.cyan);
+                gradT.addColorStop(1, isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(8, 145, 178, 0.1)');
+
+                charts.timeline = new Chart(ctxT, {
+                    type: 'bar',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [{
+                            label: 'Deadlines',
+                            data: roundedMonths.map(k => tCounts[k]),
+                            backgroundColor: gradT,
+                            borderColor: palette.cyan,
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: gridColor, drawBorder: false },
+                                ticks: { color: textColor, font: { family: 'Inter' } }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: textColor, font: { family: 'Inter' } }
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         function saveFilterState() {
