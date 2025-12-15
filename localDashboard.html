@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Executive Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        * {
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #0f172a;
+            --text-light: #64748b;
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        :root[data-theme="dark"] {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 60px;
+        }
+
+        /* --- UTILITIES --- */
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--text-main);
+            border-color: var(--border);
+        }
+
+        .btn-white:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger-ghost {
+            background: transparent;
+            color: var(--danger);
+            border-color: transparent;
+            box-shadow: none;
+        }
+
+        .btn-danger-ghost:hover {
+            background: #fef2f2;
+        }
+
+        /* --- LOGIN SCREEN --- */
+        #connect-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-body);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        /* --- LAYOUT --- */
+        nav {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            height: 70px;
+            padding: 0 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand i {
+            color: #0F9D58;
+            font-size: 1.5rem;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1920px;
+            margin: 2rem auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* --- METRICS CARDS --- */
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-top: 0.25rem;
+            color: var(--text-main);
+        }
+
+        /* --- CHARTS --- */
+        .grid-charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* Balanced 2x2 grid */
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-charts {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* --- TABLE & CONTROLS --- */
+        .controls-bar {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.6rem 0.6rem 0.6rem 2.4rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border 0.2s;
+        }
+
+        /* Form Page Styles */
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .page-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        .form-card {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .form-input-field {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        /* Table Styling */
+        .table-container {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-top: 1rem;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            max-height: 650px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: left;
+        }
+
+        th {
+            background: #e2e8f0;
+            padding: 1.2rem 1.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-main);
+            border-bottom: 2px solid #cbd5e1;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        th:hover {
+            background: #cbd5e1;
+        }
+
+        :root[data-theme="dark"] th {
+            background: #334155;
+            border-bottom-color: #475569;
+        }
+
+        :root[data-theme="dark"] th:hover {
+            background: #475569;
+        }
+
+        :root[data-theme="dark"] tbody tr:nth-child(even) {
+            background-color: #1e293b;
+            /* Match card bg or slightly different */
+        }
+
+        :root[data-theme="dark"] tbody tr:nth-last-child(odd) {
+            background-color: #1a2436;
+            /* Slightly darker */
+        }
+
+        :root[data-theme="dark"] tr:hover td {
+            background-color: #334155;
+        }
+
+        /* Dark mode specific adjustments for inputs and date filters */
+        :root[data-theme="dark"] .form-input,
+        :root[data-theme="dark"] .form-input-field,
+        :root[data-theme="dark"] .page-btn {
+            background-color: #0f172a;
+            color: #f8fafc;
+            border-color: #334155;
+        }
+
+        :root[data-theme="dark"] .btn-white {
+            background-color: #1e293b;
+            color: #f8fafc;
+            border-color: #334155;
+        }
+
+        :root[data-theme="dark"] .btn-white:hover {
+            background-color: #334155;
+        }
+
+        :root[data-theme="dark"] .date-filter-box {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        :root[data-theme="dark"] ::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+            vertical-align: middle;
+            color: var(--text-main);
+        }
+
+        /* Zebra Striping */
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        tr:hover td {
+            background-color: #f1f5f9;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-gray {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        /* Loader */
+        .loader-line {
+            height: 3px;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 200;
+            background: linear-gradient(to right, var(--primary), var(--success));
+            animation: loading 1.5s infinite ease-in-out;
+            display: none;
+        }
+
+        @keyframes loading {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 1rem;
+        }
+
+        .page-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .page-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* --- RESPONSIVE MOBILE STYLES --- */
+        .date-filter-box {
+            background: white;
+            padding: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                height: auto;
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .brand {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .brand .live-text {
+                display: none;
+            }
+
+            nav .flex.items-center.gap-2 {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            nav .btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.85rem;
+                flex-grow: 1;
+                justify-content: center;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .search-wrapper {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .date-filter-box {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .date-filter-box input {
+                width: 100% !important;
+            }
+
+            .date-filter-box span {
+                text-align: center;
+                display: block;
+                margin-bottom: 4px;
+            }
+
+            #dynamic-filters {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            #dynamic-filters select {
+                width: 100% !important;
+                min-width: unset !important;
+            }
+
+            /* Push reset button to bottom and full width */
+            .controls-bar .btn-white {
+                width: 100%;
+                margin-left: 0 !important;
+                margin-top: 0.5rem;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            /* Table Adjustments */
+            th,
+            td {
+                padding: 0.8rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            /* Form Footer Mobile */
+            .form-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .form-footer .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="datalist-container"></div>
+    <div id="loader" class="loader-line"></div>
+
+    <!-- CONNECT SCREEN -->
+    <div id="connect-screen">
+        <div class="login-box">
+            <div style="font-size: 3rem; color: #0F9D58; margin-bottom: 1rem;"><i class="fa-brands fa-google-drive"></i>
+            </div>
+            <h2 style="margin: 0 0 0.5rem 0; color: var(--text-main);">Connect Dashboard</h2>
+            <p style="color: var(--text-light); margin-bottom: 2rem; font-size: 0.95rem;">
+                Paste your Google Apps Script Web App URL below to start syncing.
+            </p>
+
+            <input type="text" id="apiUrlInput" class="form-input" placeholder="https://script.google.com/macros/s/..."
+                style="padding-left: 1rem; margin-bottom: 0.5rem;">
+
+            <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 1.5rem;">
+                <a href="#" onclick="testUrl()"
+                    style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">
+                    <i class="fa-solid fa-up-right-from-square"></i> Test URL in New Tab
+                </a>
+            </div>
+
+            <button class="btn btn-primary" onclick="connectToSheet()"
+                style="width: 100%; justify-content: center; padding: 0.8rem;">
+                Connect Securely <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1.5rem;">URL is stored locally in your browser.</p>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="app-screen" class="hidden">
+        <nav class="flex items-center justify-between">
+            <div class="brand">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Project Dashboard <span class="live-text"
+                        style="font-weight: 400; color: #94a3b8; font-size: 0.9rem;">| Live
+                        Sync</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="btn btn-white" onclick="fetchData()" title="Reload Data">
+                    <i class="fa-solid fa-rotate"></i> Sync
+                </button>
+                <button class="btn btn-white" onclick="toggleTheme()" title="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+                <button class="btn btn-primary" onclick="showAddScreen()">
+                    <i class="fa-solid fa-plus"></i> Add Task
+                </button>
+                <button class="btn btn-success" onclick="exportExcel()">
+                    <i class="fa-solid fa-file-excel"></i> Export
+                </button>
+                <button class="btn btn-danger-ghost" onclick="logout()" title="Disconnect">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </div>
+        </nav>
+
+        <div class="container">
+
+            <div class="controls-bar">
+                <div class="search-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" class="form-input" placeholder="Search project, app, owner..."
+                        onkeyup="filterData()">
+                </div>
+                <div id="dynamic-filters" class="flex gap-2 flex-wrap"></div>
+
+                <!-- Date Range Filter -->
+                <div class="date-filter-box">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Target Date:</span>
+                    <input type="date" id="dateStart" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                    <span style="color: var(--text-light);">-</span>
+                    <input type="date" id="dateEnd" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                </div>
+
+                <label class="flex items-center gap-2" style="font-weight: 600; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="overdueFilter" onchange="filterData()"
+                        style="width: 16px; height: 16px;">
+                    <span style="color: var(--danger);">Overdue Only</span>
+                </label>
+
+                <button class="btn btn-white" onclick="resetFilters()" style="margin-left: auto;">Reset Filters</button>
+            </div>
+            <div class="grid-stats">
+                <div class="card">
+                    <div class="stat-label">Total Tasks</div>
+                    <div class="stat-value" id="v-total">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value" id="v-done" style="color: var(--success);">0</div>
+                </div>
+                <!-- Changed 'In Progress' to 'Dev In-Progress' and added 'Yet to Start' -->
+                <div class="card">
+                    <div class="stat-label">Dev In-Progress</div>
+                    <div class="stat-value" id="v-dev" style="color: var(--primary);">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Yet to Start</div>
+                    <div class="stat-value" id="v-yet" style="color: var(--warning);">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Overdue Items</div>
+                    <div class="stat-value" id="v-overdue" style="color: var(--danger);">0</div>
+                </div>
+            </div>
+
+            <div class="grid-charts">
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Workload by Owner</h4>
+                    <div class="chart-container">
+                        <canvas id="chartOwner"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Status Breakdown</h4>
+                    <div class="chart-container">
+                        <canvas id="chartStatus"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Tasks by Application</h4>
+                    <div class="chart-container">
+                        <canvas id="chartApps"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Monthly Deadline Trend
+                    </h4>
+                    <div class="chart-container">
+                        <canvas id="chartTimeline"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-scroll">
+                    <table id="mainTable">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+
+    <!-- ADD TASK SCREEN -->
+    <div id="add-screen" class="hidden container">
+        <div class="page-header">
+            <button class="btn btn-white" onclick="showDashboard()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <h2>Add New Task</h2>
+        </div>
+        <div class="card form-card">
+            <div id="add-form-body"></div>
+            <div class="form-footer">
+                <button class="btn btn-primary" onclick="saveAdd()">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT TASK SCREEN -->
+    <div id="edit-screen" class="hidden container">
+        <div class="page-header">
+            <button class="btn btn-white" onclick="showDashboard()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <h2>Edit Task</h2>
+        </div>
+        <div class="card form-card">
+            <div id="edit-form-body"></div>
+            <div class="form-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger-ghost" onclick="deleteTask()"><i class="fa-solid fa-trash"></i> Delete
+                    Record</button>
+                <button class="btn btn-primary" onclick="saveEdit()">Update Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL STATE ---
+        let API_URL = "";
+        let rawData = [];
+        let headers = [];
+        let charts = { owner: null, status: null, apps: null, timeline: null };
+        let editingRow = null;
+
+        // View State
+        let sortCol = null;
+        let sortAsc = true;
+        let currentPage = 1;
+        const rowsPerPage = 25;
+
+        // --- INITIALIZATION ---
+        window.onload = function () {
+            // Init Theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+
+            const stored = localStorage.getItem("sheetApiUrl");
+            if (stored) {
+                API_URL = stored;
+                showApp();
+                fetchData();
+            }
+        };
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            setTheme(target);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            }
+            // Trigger chart refresh to apply new theme colors
+            if (typeof filterData === 'function' && typeof rawData !== 'undefined' && rawData.length > 0) {
+                filterData();
+            }
+        }
+
+        function connectToSheet() {
+            const input = document.getElementById('apiUrlInput').value.trim();
+
+            if (!input) { alert("Please enter a URL."); return; }
+            if (!input.startsWith("http")) { alert("Please enter a valid URL starting with http/https"); return; }
+
+            // Validation: Warn if it looks like a Spreadsheet URL instead of a Script URL
+            if (input.includes("docs.google.com/spreadsheets")) {
+                alert("It looks like you pasted the Google Sheet URL.\n\nPlease paste the 'Web App URL' from your Google Apps Script deployment (starts with script.google.com).");
+                return;
+            }
+
+            // Basic validation for script.google.com
+            if (!input.includes("script.google.com")) {
+                if (!confirm("This URL does not look like a Google Apps Script URL. Are you sure you want to continue?")) return;
+            }
+
+            API_URL = input;
+            localStorage.setItem("sheetApiUrl", input);
+            showApp();
+            fetchData();
+        }
+
+        function logout() {
+            if (confirm("Disconnect from this Google Sheet?")) {
+                localStorage.removeItem("sheetApiUrl");
+                location.reload();
+            }
+        }
+
+        function testUrl() {
+            const input = document.getElementById('apiUrlInput').value.trim();
+            if (!input) { alert("Please enter the URL first."); return; }
+            // Append action=read just in case, though usually plain GET works for testing
+            const separator = input.includes('?') ? '&' : '?';
+            const url = `${input}${separator}action=read`;
+
+            // Open in new tab
+            window.open(url, '_blank');
+
+            alert("Explanation:\n- If the new tab shows JSON data (e.g., [{\"APP\":...}]), the URL is CORRECT.\n- If it asks you to LOGIN to Google, the script permissions are WRONG (change to 'Anyone').\n- If it shows 'Script not found', the URL is WRONG.");
+        }
+
+        function testUrl() {
+            const input = document.getElementById('apiUrlInput').value.trim();
+            if (!input) { alert("Please enter the URL first."); return; }
+            const separator = input.includes('?') ? '&' : '?';
+            const url = `${input}${separator}action=read`;
+
+            window.open(url, '_blank');
+
+            alert("Explanation:\n- If the content is JSON, the URL is correct.\n- If it asks to Login, permissions are wrong (deploy as Anyone).");
+        }
+
+        function showApp() {
+            document.getElementById('connect-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+        }
+
+        // --- DATA FETCHING (API) ---
+        async function fetchData() {
+            showLoader(true);
+            try {
+                // LOCAL FILE COMPATIBILITY MODE (POST + text/plain)
+                const separator = API_URL.includes('?') ? '&' : '?';
+                const url = `${API_URL}${separator}t=${Date.now()}`;
+
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'read' })
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP Error ${res.status}`);
+                }
+
+                const text = await res.text(); // Get raw text first
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    console.warn("Non-JSON response:", text.substring(0, 100));
+                    throw new Error("Invalid response. Check if Script is deployed as 'Anyone'.");
+                }
+
+                if (json.status === 'error') throw new Error(json.message);
+
+                let data = Array.isArray(json) ? json : (json.data || []);
+
+                if (data.length > 0) {
+                    headers = Object.keys(data[0]).filter(k => k !== '_rowIndex');
+                    const desiredOrder = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
+                    headers.sort((a, b) => {
+                        const ia = desiredOrder.indexOf(a.toUpperCase());
+                        const ib = desiredOrder.indexOf(b.toUpperCase());
+                        if (ia !== -1 && ib !== -1) return ia - ib;
+                        if (ia !== -1) return -1;
+                        if (ib !== -1) return 1;
+                        return 0;
+                    });
+
+                    rawData = data;
+                    sortCol = 'TARGET DATE';
+                    sortAsc = false;
+                    initDashboard();
+                } else {
+                    headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
+                    rawData = [];
+                    initDashboard();
+                }
+            } catch (e) {
+                console.error(e);
+                let msg = "Connection Error: " + e.message;
+                if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+                    msg += "\n\nCRITICAL FIX NEEDED:\n1. Open your Google Apps Script.\n2. Click 'Deploy' -> 'New Deployment'.\n3. Set 'Who has access' to 'ANYONE'. (This is the #1 cause)\n4. Copy the NEW URL and use it below.\n\nTip: Click the 'Test URL' button to check for permission errors.";
+                }
+                alert(msg);
+            }
+            showLoader(false);
+        }
+
+        async function sendUpdate(payload, action) {
+            showLoader(true);
+            try {
+                // Attach action
+                const finalPayload = { ...payload, action: action };
+
+                // Attempt Basic POST
+                // We use Content-Type: text/plain to avoid CORS preflight (OPTIONS) which GAS doesn't handle.
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(finalPayload)
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status} ${res.statusText}`);
+                }
+
+                const text = await res.text();
+
+                try {
+                    const json = JSON.parse(text);
+                    if (json.status === 'error') throw new Error(json.message);
+                } catch (e) {
+                    // unexpected response format
+                    console.warn("Non-JSON response:", text);
+                    if (text.includes("<!DOCTYPE html>") || text.includes("<html")) {
+                        throw new Error("The server returned HTML instead of JSON. This often happens if:\n1. The script is not deployed as 'Anyone'.\n2. The script crashed.\n3. You need to create a 'New Deployment' in Apps Script.");
+                    }
+                }
+
+            } catch (e) {
+                console.error("Sync Error:", e);
+                // The 'Failed to fetch' with 200 OK often means CORS issues hidden by the browser or Script Crash
+                alert("Update failed. Reason: " + e.message + "\n\nRefer to the Console (F12) for details.\n\nREMINDER: Ensure your Google Apps Script is deployed as 'Web App' -> 'Who has access: Anyone'.");
+            }
+            showLoader(false);
+        }
+
+        // --- CORE LOGIC ---
+        function initDashboard() {
+            refreshDatalists();
+            buildFilters();
+            filterData();
+        }
+
+        function filterData() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filters = document.querySelectorAll('#dynamic-filters select');
+
+            let filtered = rawData.filter(row => {
+                // 1. Dropdown Filters
+                for (let sel of filters) {
+                    const col = sel.getAttribute('data-col');
+                    if (sel.value !== 'All' && row[col] !== sel.value) return false;
+                }
+                // 2. Global Search
+                if (search) {
+                    const rowStr = Object.values(row).join(' ').toLowerCase();
+                    if (!rowStr.includes(search)) return false;
+                }
+
+                // 3. Overdue Filter
+                const overdueOnly = document.getElementById('overdueFilter').checked;
+                if (overdueOnly) {
+                    const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                    // Status key might be needed if not already available in scope, but we likely need to look it up from headers
+                    // Actually, 'filters' loop above uses 'data-col' attribute. We can find Status header.
+                    const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
+
+                    if (keyTarget) { // Status key check is implicit in logic below (row[keyStatus])
+                        const rowDateStr = row[keyTarget];
+                        const rowStatus = row[keyStatus] || '';
+
+                        // If no date, cannot be overdue
+                        if (!rowDateStr) return false;
+
+                        const rDate = new Date(rowDateStr);
+                        // Normalize to midnight
+                        rDate.setHours(0, 0, 0, 0);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+
+                        if (isNaN(rDate.getTime())) return false;
+
+                        // Condition: Date < Today (Yesterday or before) 
+                        // AND Status is one of: YET TO START, DEV IN-PROGRESS, DEV COMPLETED
+                        if (!(rDate < today)) return false;
+
+                        const validStatuses = ['YET TO START', 'DEV IN-PROGRESS', 'DEV COMPLETED'];
+                        if (!validStatuses.includes(rowStatus)) return false;
+                    }
+                }
+
+                // 4. Date Range Filter (Target Date)
+                const dateStart = document.getElementById('dateStart').value;
+                const dateEnd = document.getElementById('dateEnd').value;
+                if (dateStart || dateEnd) {
+                    const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                    if (keyTarget) {
+                        const rowDateStr = row[keyTarget];
+                        if (!rowDateStr) return false; // Date required if filtering by date
+
+                        const rDate = new Date(rowDateStr);
+                        if (isNaN(rDate.getTime())) return false; // Invalid date in row
+
+                        if (dateStart) {
+                            const dStart = new Date(dateStart);
+                            if (rDate < dStart) return false;
+                        }
+                        if (dateEnd) {
+                            const dEnd = new Date(dateEnd);
+                            // Set end date to end of day to be inclusive
+                            dEnd.setHours(23, 59, 59, 999);
+                            if (rDate > dEnd) return false;
+                        }
+                    }
+                }
+
+                return true;
+            });
+
+            // 3. Sort
+            if (sortCol) {
+                filtered.sort((a, b) => {
+                    const valA = (a[sortCol] || '').toString().toLowerCase();
+                    const valB = (b[sortCol] || '').toString().toLowerCase();
+                    if (valA < valB) return sortAsc ? -1 : 1;
+                    if (valA > valB) return sortAsc ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            updateStats(filtered);
+            updateCharts(filtered);
+            renderTable(filtered);
+        }
+
+        // --- RENDERING ---
+        function renderTable(data) {
+            // Pagination logic
+            const total = data.length;
+            const totalPages = Math.ceil(total / rowsPerPage);
+            if (currentPage > totalPages) currentPage = 1;
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = data.slice(start, end);
+
+            const thead = document.querySelector('#mainTable thead');
+            const tbody = document.querySelector('#mainTable tbody');
+            thead.innerHTML = ''; tbody.innerHTML = '';
+
+            // Define Date Columns for reuse
+            const dateCols = ['DEV TEST CONDUCTED ON', 'QA TEST CONDUCTED ON', 'ALPHA TEST CONDUCTED ON', 'TARGET DATE'];
+
+            // Header Row
+            let trH = document.createElement('tr');
+            headers.forEach(h => {
+                let th = document.createElement('th');
+                th.innerHTML = h;
+                if (sortCol === h) th.innerHTML += sortAsc ? ' <i class="fa-solid fa-caret-up"></i>' : ' <i class="fa-solid fa-caret-down"></i>';
+                th.onclick = () => {
+                    if (sortCol === h) sortAsc = !sortAsc;
+                    else { sortCol = h; sortAsc = true; }
+                    filterData();
+                };
+
+                // --- COLUMN WIDTH ADJUSTMENTS ---
+                const hUpper = h.toUpperCase();
+
+                if (dateCols.includes(hUpper)) {
+                    th.style.minWidth = '140px';
+                    th.style.width = '140px';
+                } else if (hUpper === 'DELIVERABLES' || hUpper === 'REMARKS') {
+                    th.style.minWidth = '500px';
+                } else if (hUpper === 'PROJECT' || hUpper === 'APP') {
+                    th.style.minWidth = '220px';
+                }
+                // --------------------------------
+
+                trH.appendChild(th);
+            });
+            thead.appendChild(trH);
+
+            // Data Rows
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${headers.length}" style="text-align:center; padding: 2rem; color: #94a3b8;">No data found</td></tr>`;
+            } else {
+                pageData.forEach(row => {
+                    let tr = document.createElement('tr');
+                    headers.forEach(key => {
+                        let td = document.createElement('td');
+                        let val = row[key] || "";
+
+                        if (dateCols.includes(key.toUpperCase()) && val) {
+                            // Format date to show only YYYY-MM-DD (or localized string)
+                            try {
+                                const d = new Date(val);
+                                if (!isNaN(d.getTime())) {
+                                    val = d.toISOString().split('T')[0];
+                                }
+                            } catch (e) { }
+                        }
+
+                        // Special styling for STATUS
+                        if (key.toUpperCase() === 'STATUS') {
+                            let badgeClass = 'badge-gray';
+                            const vLower = val.toLowerCase();
+                            if (vLower.includes('completed') || vLower.includes('go-live')) badgeClass = 'badge-success';
+                            else if (vLower.includes('dev')) badgeClass = 'badge-info';
+                            else if (vLower.includes('progress')) badgeClass = 'badge-warning';
+
+                            td.innerHTML = `<span class="badge ${badgeClass}">${val}</span>`;
+                        } else {
+                            td.innerText = val;
+                        }
+
+                        // Click to Edit (Navigate to Edit Page)
+                        td.onclick = () => showEditScreen(row);
+                        td.style.cursor = 'pointer';
+
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+            }
+
+            renderPagination(totalPages);
+        }
+
+        // --- NAVIGATION & FORMS ---
+        function showDashboard() {
+            document.getElementById('add-screen').classList.add('hidden');
+            document.getElementById('edit-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            editingRow = null;
+        }
+
+        function showAddScreen() {
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('edit-screen').classList.add('hidden');
+            document.getElementById('add-screen').classList.remove('hidden');
+
+            const container = document.getElementById('add-form-body');
+            renderFormFields(container, null, 'add');
+        }
+
+        function showEditScreen(row) {
+            editingRow = row;
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('add-screen').classList.add('hidden');
+            document.getElementById('edit-screen').classList.remove('hidden');
+
+            const container = document.getElementById('edit-form-body');
+            renderFormFields(container, row, 'edit');
+        }
+
+        function renderFormFields(container, row, prefix) {
+            container.innerHTML = '';
+
+            // Define required fields
+            const requiredFields = ['APP', 'PROJECT', 'DELIVERABLES', 'OWNER', 'STATUS'];
+
+            headers.forEach(h => {
+                let val = row ? (row[h] || '') : '';
+                let inputHtml;
+                const hUpper = h.toUpperCase();
+                const isRequired = requiredFields.includes(hUpper);
+                const star = isRequired ? '<span style="color: var(--danger); margin-left: 4px;">*</span>' : '';
+
+                // Date Fields
+                const dateFields = ['DEV TEST CONDUCTED ON', 'QA TEST CONDUCTED ON', 'ALPHA TEST CONDUCTED ON', 'TARGET DATE'];
+
+                if (dateFields.includes(hUpper)) {
+                    // Try to format value to YYYY-MM-DD for the input
+                    if (val) {
+                        const d = new Date(val);
+                        if (!isNaN(d.getTime())) {
+                            val = d.toISOString().split('T')[0];
+                        }
+                    }
+                    inputHtml = `<input type="date" class="form-input-field" id="${prefix}-${sanitize(h)}" value="${val}">`;
+                }
+                // Big fields for DELIVERABLES and REMARKS
+                else if (hUpper === 'DELIVERABLES' || hUpper === 'REMARKS') {
+                    inputHtml = `<textarea class="form-input-field" id="${prefix}-${sanitize(h)}" rows="5" style="resize: vertical;">${val}</textarea>`;
+                }
+                // Status Dropdown
+                else if (hUpper === 'STATUS') {
+                    const statusOptions = [
+                        "YET TO START",
+                        "DEV IN-PROGRESS",
+                        "DEV COMPLETED",
+                        "QA TEST",
+                        "ALPHA TEST",
+                        "BETA TEST",
+                        "READY FOR PRODUCTION",
+                        "GO-LIVE (COMPLETED)"
+                    ];
+
+                    let opts = statusOptions.map(opt => `<option value="${opt}" ${opt === val ? 'selected' : ''}>${opt}</option>`).join('');
+
+                    // If current value is not in standard list, add it (preserves legacy data)
+                    if (val && !statusOptions.includes(val)) {
+                        opts += `<option value="${val}" selected>${val}</option>`;
+                    }
+
+                    inputHtml = `<select class="form-input-field" id="${prefix}-${sanitize(h)}">
+                                    <option value="" disabled ${!val ? 'selected' : ''}>Select Status</option>
+                                    ${opts}
+                                 </select>`;
+                }
+                else {
+                    inputHtml = `<input class="form-input-field" id="${prefix}-${sanitize(h)}" list="list-${sanitize(h)}" value="${val}">`;
+                }
+
+                container.innerHTML += `
+                            <div class="input-group">
+                                <label class="form-label">${h}${star}</label>
+                                ${inputHtml}
+                            </div>
+                            `;
+            });
+        }
+
+        function getFormData(prefix) {
+            const newRow = {};
+            const requiredFields = ['APP', 'PROJECT', 'DELIVERABLES', 'OWNER', 'STATUS'];
+            let missing = [];
+
+            headers.forEach(h => {
+                const el = document.getElementById(`${prefix}-${sanitize(h)}`);
+                if (el) {
+                    const val = el.value.trim();
+                    newRow[h] = val;
+
+                    if (requiredFields.includes(h.toUpperCase()) && !val) {
+                        missing.push(h);
+                    }
+                }
+            });
+
+            if (missing.length > 0) {
+                alert(`Please fill in the following required fields:\n- ${missing.join('\n- ')}`);
+                return null;
+            }
+            return newRow;
+        }
+
+        function saveAdd() {
+            const newRow = getFormData('add');
+            if (!newRow) return;
+
+            rawData.push(newRow);
+            sendUpdate(newRow, 'add');
+
+            refreshDatalists();
+            filterData();
+            showDashboard();
+        }
+
+        function saveEdit() {
+            if (!editingRow) return;
+            const newRow = getFormData('edit');
+            if (!newRow) return;
+
+            // Update Local State first
+            Object.assign(editingRow, newRow);
+
+            // CRITICAL: We must send the whole object (or at least include _rowIndex) 
+            // so the Google Script knows which row to update.
+            // 'newRow' alone lacks the hidden _rowIndex field.
+            sendUpdate(editingRow, 'update');
+
+            refreshDatalists();
+            filterData();
+            showDashboard();
+        }
+
+        function deleteTask() {
+            if (!editingRow) return;
+            if (!confirm("Are you sure you want to delete this record? This cannot be undone.")) return;
+
+            const idx = rawData.indexOf(editingRow);
+            if (idx > -1) rawData.splice(idx, 1);
+
+            sendUpdate(editingRow, 'delete');
+
+            refreshDatalists();
+            filterData();
+            showDashboard();
+        }
+
+        // --- COMPONENTS ---
+        function renderPagination(totalPages) {
+            const div = document.getElementById('pagination');
+            div.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    let btn = document.createElement('div');
+                    btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+                    btn.innerText = i;
+                    btn.onclick = () => { currentPage = i; filterData(); };
+                    div.appendChild(btn);
+                } else if (div.lastChild && div.lastChild.innerText !== '...') {
+                    let dots = document.createElement('div');
+                    dots.innerText = '...';
+                    dots.style.alignSelf = 'center';
+                    div.appendChild(dots);
+                }
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('v-total').innerText = data.length;
+
+            const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
+
+            if (keyStatus) {
+                // Completed: 'COMPLETED' or 'GO-LIVE'
+                const done = data.filter(r => (r[keyStatus] || '').toUpperCase().includes('COMPLETED') || (r[keyStatus] || '').toUpperCase().includes('GO-LIVE')).length;
+
+                // Dev In-Progress
+                const dev = data.filter(r => (r[keyStatus] || '').toUpperCase() === 'DEV IN-PROGRESS').length;
+
+                // Yet to Start
+                const yet = data.filter(r => (r[keyStatus] || '').toUpperCase() === 'YET TO START').length;
+
+                // Overdue
+                let overdue = 0;
+                const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                if (keyTarget) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    overdue = data.filter(r => {
+                        const s = r[keyStatus] || '';
+                        const dStr = r[keyTarget];
+                        if (!dStr) return false;
+
+                        const validStatuses = ['YET TO START', 'DEV IN-PROGRESS', 'DEV COMPLETED'];
+                        if (!validStatuses.includes(s)) return false;
+
+                        const d = new Date(dStr);
+                        if (isNaN(d.getTime())) return false;
+                        d.setHours(0, 0, 0, 0);
+
+                        return d < today;
+                    }).length;
+                }
+
+                document.getElementById('v-done').innerText = done;
+                document.getElementById('v-dev').innerText = dev;
+                document.getElementById('v-yet').innerText = yet;
+                document.getElementById('v-overdue').innerText = overdue;
+            }
+        }
+
+        function updateCharts(data) {
+            const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
+            const keyOwner = headers.find(h => h.toUpperCase() === 'OWNER');
+            const keyApp = headers.find(h => h.toUpperCase() === 'APP');
+            const keyDate = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+
+            // --- DATA AGGREGATION ---
+            const sCounts = {}, oCounts = {}, aCounts = {}, tCounts = {};
+
+            data.forEach(r => {
+                const s = r[keyStatus] || 'Unknown';
+                const o = r[keyOwner] || 'Unassigned';
+                sCounts[s] = (sCounts[s] || 0) + 1;
+                oCounts[o] = (oCounts[o] || 0) + 1;
+
+                if (keyApp) {
+                    const a = r[keyApp] || 'Other';
+                    aCounts[a] = (aCounts[a] || 0) + 1;
+                }
+
+                if (keyDate && r[keyDate]) {
+                    try {
+                        const d = new Date(r[keyDate]);
+                        if (!isNaN(d.getTime())) {
+                            // Sortable format YYYY-MM for logic, display Short Month later
+                            const sortKey = d.toISOString().slice(0, 7); // 2025-10
+                            tCounts[sortKey] = (tCounts[sortKey] || 0) + 1;
+                        }
+                    } catch (e) { }
+                }
+            });
+
+            // --- STYLING & CONFIG ---
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+            // Dynamic Palette: Brighter for Dark Mode, Saturated for Light Mode
+            const colors = isDark ? {
+                primary: '#818cf8', // Indigo 400
+                success: '#34d399', // Emerald 400
+                warning: '#fbbf24', // Amber 400
+                danger: '#f87171',  // Red 400
+                info: '#60a5fa', // Blue 400
+                purple: '#a78bfa', // Violet 400
+                pink: '#f472b6', // Pink 400
+                cyan: '#22d3ee', // Cyan 400
+                slate: '#94a3b8'
+            } : {
+                primary: '#4f46e5', // Indigo 600
+                success: '#059669', // Emerald 600
+                warning: '#d97706', // Amber 600
+                danger: '#dc2626',  // Red 600
+                info: '#2563eb', // Blue 600
+                purple: '#7c3aed', // Violet 600
+                pink: '#db2777', // Pink 600
+                cyan: '#0891b2', // Cyan 600
+                slate: '#475569'
+            };
+
+            const palette = Object.values(colors);
+            const textColor = isDark ? '#e2e8f0' : '#64748b';
+            const gridColor = isDark ? 'transparent' : '#f1f5f9';
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        titleColor: isDark ? '#f8fafc' : '#0f172a',
+                        bodyColor: isDark ? '#cbd5e1' : '#475569',
+                        borderColor: isDark ? '#334155' : '#e2e8f0',
+                        borderWidth: 1,
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        usePointStyle: true,
+                    }
+                },
+                layout: { padding: 10 }
+            };
+
+            // 1. STATUS BREAKDOWN
+            if (charts.status) charts.status.destroy();
+            const ctxS = document.getElementById('chartStatus').getContext('2d');
+            charts.status = new Chart(ctxS, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sCounts),
+                    datasets: [{
+                        data: Object.values(sCounts),
+                        backgroundColor: [
+                            colors.success, colors.info, colors.warning, colors.danger,
+                            colors.slate, colors.purple, colors.pink, colors.cyan
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: textColor }
+                        }
+                    },
+                    layout: { padding: 10 }
+                }
+            });
+
+            // 2. APPS DISTRIBUTION (Vertical Bar - Purple Theme)
+            if (document.getElementById('chartApps')) {
+                if (charts.apps) charts.apps.destroy();
+                const ctxA = document.getElementById('chartApps').getContext('2d');
+
+                // Dynamic Gradient
+                let gradA = ctxA.createLinearGradient(0, 0, 0, 300);
+                gradA.addColorStop(0, colors.purple);
+                gradA.addColorStop(1, isDark ? 'rgba(167, 139, 250, 0.1)' : 'rgba(124, 58, 237, 0.1)');
+
+                charts.apps = new Chart(ctxA, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(aCounts),
+                        datasets: [{
+                            label: 'Tasks',
+                            data: Object.values(aCounts),
+                            backgroundColor: gradA,
+                            borderColor: colors.purple,
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: gridColor, drawBorder: false },
+                                ticks: { color: textColor, font: { size: 11 } }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: textColor, font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3. OWNER WORKLOAD (Line/Area - Green Theme)
+            if (charts.owner) charts.owner.destroy();
+            const ctxO = document.getElementById('chartOwner').getContext('2d');
+
+            let gradO = ctxO.createLinearGradient(0, 0, 0, 300);
+            gradO.addColorStop(0, isDark ? 'rgba(52, 211, 153, 0.4)' : 'rgba(5, 150, 105, 0.4)');
+            gradO.addColorStop(1, isDark ? 'rgba(52, 211, 153, 0.0)' : 'rgba(5, 150, 105, 0.0)');
+
+            charts.owner = new Chart(ctxO, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(oCounts),
+                    datasets: [{
+                        label: 'Tasks',
+                        data: Object.values(oCounts),
+                        borderColor: colors.success,
+                        borderWidth: 2,
+                        backgroundColor: gradO,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: isDark ? '#1e293b' : '#fff',
+                        pointBorderColor: colors.success,
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        y: {
+                            grid: { color: gridColor, drawBorder: false, borderDash: [5, 5] },
+                            ticks: { color: textColor }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor }
+                        }
+                    }
+                }
+            });
+
+            // 4. DEADLINE TREND (Bar - Cyan Theme)
+            if (document.getElementById('chartTimeline')) {
+                const ctxT = document.getElementById('chartTimeline').getContext('2d');
+                if (charts.timeline) charts.timeline.destroy();
+
+                const roundedMonths = Object.keys(tCounts).sort();
+                const displayLabels = roundedMonths.map(k => {
+                    const [y, m] = k.split('-');
+                    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+                    return date.toLocaleString('default', { month: 'short', year: '2-digit' });
+                });
+
+                let gradT = ctxT.createLinearGradient(0, 0, 0, 300);
+                gradT.addColorStop(0, colors.cyan);
+                gradT.addColorStop(1, isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(8, 145, 178, 0.1)');
+
+                charts.timeline = new Chart(ctxT, {
+                    type: 'bar',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [{
+                            label: 'Deadlines',
+                            data: roundedMonths.map(k => tCounts[k]),
+                            backgroundColor: gradT,
+                            borderColor: colors.cyan,
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            barPercentage: 0.5
+                        }]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: gridColor, drawBorder: false },
+                                ticks: { color: textColor }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: textColor }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function buildFilters() {
+            const div = document.getElementById('dynamic-filters');
+            div.innerHTML = '';
+
+            ['APP', 'OWNER', 'STATUS'].forEach(t => {
+                const h = headers.find(head => head.toUpperCase() === t);
+                if (h) {
+                    const sel = document.createElement('select');
+                    sel.className = 'form-input';
+                    sel.style.width = 'auto'; sel.style.minWidth = '140px';
+                    sel.setAttribute('data-col', h);
+                    sel.onchange = filterData;
+                    sel.add(new Option(t, 'All'));
+
+                    if (t === 'STATUS') {
+                        // Use specific order for Status
+                        const statusOrder = [
+                            "YET TO START", "DEV IN-PROGRESS", "DEV COMPLETED",
+                            "QA TEST", "ALPHA TEST", "BETA TEST",
+                            "READY FOR PRODUCTION", "GO-LIVE (COMPLETED)"
+                        ];
+                        // Add defined statuses first
+                        statusOrder.forEach(val => sel.add(new Option(val, val)));
+
+                        // Add any other statuses found in data but not in list
+                        const unique = [...new Set(rawData.map(r => r[h]))];
+                        unique.forEach(val => {
+                            if (val && !statusOrder.includes(val)) sel.add(new Option(val, val));
+                        });
+                    } else {
+                        const unique = [...new Set(rawData.map(r => r[h]))].sort();
+                        unique.forEach(val => { if (val) sel.add(new Option(val, val)); });
+                    }
+
+                    div.appendChild(sel);
+                }
+            });
+        }
+
+        function refreshDatalists() {
+            const container = document.getElementById('datalist-container');
+            container.innerHTML = '';
+            headers.forEach(h => {
+                const dl = document.createElement('datalist');
+                dl.id = `list-${sanitize(h)}`;
+                const unique = [...new Set(rawData.map(r => r[h]))].sort();
+                unique.forEach(v => dl.appendChild(new Option(v)));
+                container.appendChild(dl);
+            });
+        }
+
+        function exportExcel() {
+            if (rawData.length === 0) return;
+            const cleanData = rawData.map(({ _rowIndex, ...rest }) => rest);
+            const ws = XLSX.utils.json_to_sheet(cleanData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Project Data");
+            XLSX.writeFile(wb, "Project_Dashboard_Backup.xlsx");
+        }
+
+        // --- UTILS ---
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('#dynamic-filters select').forEach(s => s.selectedIndex = 0);
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            document.getElementById('overdueFilter').checked = false;
+            currentPage = 1;
+            sortCol = null;
+            filterData();
+        }
+
+        function sanitize(str) { return str.replace(/[^a-zA-Z0-9]/g, '_'); }
+        function showLoader(show) {
+            document.getElementById('loader').style.display = show ? 'block' : 'none';
+        }
+
+    </script>
+</body>
+
+</html>
