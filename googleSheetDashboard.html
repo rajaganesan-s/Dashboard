@@ -689,7 +689,7 @@
         </nav>
 
         <div class="container">
-            
+
             <div class="controls-bar">
                 <div class="search-wrapper">
                     <i class="fa-solid fa-magnifying-glass"></i>
@@ -707,6 +707,12 @@
                     <input type="date" id="dateEnd" class="form-input" style="width: auto; padding: 0.4rem;"
                         onchange="filterData()">
                 </div>
+
+                <label class="flex items-center gap-2" style="font-weight: 600; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="overdueFilter" onchange="filterData()"
+                        style="width: 16px; height: 16px;">
+                    <span style="color: var(--danger);">Overdue Only</span>
+                </label>
 
                 <button class="btn btn-white" onclick="resetFilters()" style="margin-left: auto;">Reset Filters</button>
             </div>
@@ -727,6 +733,10 @@
                 <div class="card">
                     <div class="stat-label">Yet to Start</div>
                     <div class="stat-value" id="v-yet" style="color: var(--warning);">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Overdue Items</div>
+                    <div class="stat-value" id="v-overdue" style="color: var(--danger);">0</div>
                 </div>
             </div>
 
@@ -998,7 +1008,39 @@
                     if (!rowStr.includes(search)) return false;
                 }
 
-                // 3. Date Range Filter (Target Date)
+                // 3. Overdue Filter
+                const overdueOnly = document.getElementById('overdueFilter').checked;
+                if (overdueOnly) {
+                    const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                    // Status key might be needed if not already available in scope, but we likely need to look it up from headers
+                    // Actually, 'filters' loop above uses 'data-col' attribute. We can find Status header.
+                    const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
+
+                    if (keyTarget) { // Status key check is implicit in logic below (row[keyStatus])
+                        const rowDateStr = row[keyTarget];
+                        const rowStatus = row[keyStatus] || '';
+
+                        // If no date, cannot be overdue
+                        if (!rowDateStr) return false;
+
+                        const rDate = new Date(rowDateStr);
+                        // Normalize to midnight
+                        rDate.setHours(0, 0, 0, 0);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+
+                        if (isNaN(rDate.getTime())) return false;
+
+                        // Condition: Date < Today (Yesterday or before) 
+                        // AND Status is one of: YET TO START, DEV IN-PROGRESS, DEV COMPLETED
+                        if (!(rDate < today)) return false;
+
+                        const validStatuses = ['YET TO START', 'DEV IN-PROGRESS', 'DEV COMPLETED'];
+                        if (!validStatuses.includes(rowStatus)) return false;
+                    }
+                }
+
+                // 4. Date Range Filter (Target Date)
                 const dateStart = document.getElementById('dateStart').value;
                 const dateEnd = document.getElementById('dateEnd').value;
                 if (dateStart || dateEnd) {
@@ -1335,9 +1377,32 @@
                 // Yet to Start
                 const yet = data.filter(r => (r[keyStatus] || '').toUpperCase() === 'YET TO START').length;
 
+                // Overdue
+                let overdue = 0;
+                const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                if (keyTarget) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    overdue = data.filter(r => {
+                        const s = r[keyStatus] || '';
+                        const dStr = r[keyTarget];
+                        if (!dStr) return false;
+
+                        const validStatuses = ['YET TO START', 'DEV IN-PROGRESS', 'DEV COMPLETED'];
+                        if (!validStatuses.includes(s)) return false;
+
+                        const d = new Date(dStr);
+                        if (isNaN(d.getTime())) return false;
+                        d.setHours(0, 0, 0, 0);
+
+                        return d < today;
+                    }).length;
+                }
+
                 document.getElementById('v-done').innerText = done;
                 document.getElementById('v-dev').innerText = dev;
                 document.getElementById('v-yet').innerText = yet;
+                document.getElementById('v-overdue').innerText = overdue;
             }
         }
 
@@ -1651,6 +1716,7 @@
             document.querySelectorAll('#dynamic-filters select').forEach(s => s.selectedIndex = 0);
             document.getElementById('dateStart').value = '';
             document.getElementById('dateEnd').value = '';
+            document.getElementById('overdueFilter').checked = false;
             currentPage = 1;
             sortCol = null;
             filterData();
