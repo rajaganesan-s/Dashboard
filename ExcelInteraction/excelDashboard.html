@@ -1,0 +1,2018 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Project Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        * {
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        :root {
+            --primary: #107c41;
+            /* Excel Green */
+            --primary-dark: #0c5e31;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #0f172a;
+            --text-light: #64748b;
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        :root[data-theme="dark"] {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 60px;
+        }
+
+        /* --- UTILITIES --- */
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--text-main);
+            border-color: var(--border);
+        }
+
+        .btn-white:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger-ghost {
+            background: transparent;
+            color: var(--danger);
+            border-color: transparent;
+            box-shadow: none;
+        }
+
+        .btn-danger-ghost:hover {
+            background: #fef2f2;
+        }
+
+        /* --- TABS --- */
+        .tab-group {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab {
+            padding: 0.8rem 1.2rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .file-item {
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-item:hover {
+            background-color: #f1f5f9;
+        }
+
+        .file-item i {
+            color: var(--primary);
+        }
+
+        /* --- LOGIN SCREEN --- */
+        #connect-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-body);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+            position: relative;
+        }
+
+        .file-drop-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1.5rem;
+        }
+
+        .file-drop-area:hover,
+        .file-drop-area.dragover {
+            border-color: var(--primary);
+            background: rgba(16, 124, 65, 0.05);
+        }
+
+        /* --- LAYOUT --- */
+        nav {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            height: 70px;
+            padding: 0 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand i {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1920px;
+            margin: 2rem auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* --- METRICS CARDS --- */
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-top: 0.25rem;
+            color: var(--text-main);
+        }
+
+        /* --- CHARTS --- */
+        .grid-charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-charts {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* --- TABLE & CONTROLS --- */
+        .controls-bar {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.6rem 0.6rem 0.6rem 2.4rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border 0.2s;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Form Page Styles */
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .page-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        .form-card {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .form-input-field {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(16, 124, 65, 0.1);
+        }
+
+        .form-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        /* Table Styling */
+        .table-container {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-top: 1rem;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            max-height: 650px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: left;
+        }
+
+        th {
+            background: #e2e8f0;
+            padding: 1.2rem 1.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-main);
+            border-bottom: 2px solid #cbd5e1;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        th:hover {
+            background: #cbd5e1;
+        }
+
+        :root[data-theme="dark"] th {
+            background: #334155;
+            border-bottom-color: #475569;
+        }
+
+        :root[data-theme="dark"] th:hover {
+            background: #475569;
+        }
+
+        :root[data-theme="dark"] tbody tr:nth-child(even) {
+            background-color: #1e293b;
+        }
+
+        :root[data-theme="dark"] tbody tr:nth-last-child(odd) {
+            background-color: #1a2436;
+        }
+
+        :root[data-theme="dark"] tr:hover td {
+            background-color: #334155;
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+            vertical-align: middle;
+            color: var(--text-main);
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        tr:hover td {
+            background-color: #f1f5f9;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-gray {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        /* Loader */
+        .loader-line {
+            height: 3px;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 200;
+            background: linear-gradient(to right, var(--primary), var(--success));
+            animation: loading 1.5s infinite ease-in-out;
+            display: none;
+        }
+
+        @keyframes loading {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 1rem;
+        }
+
+        .page-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .page-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* --- RESPONSIVE --- */
+        .date-filter-box {
+            background: white;
+            padding: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                height: auto;
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+            }
+
+            .search-wrapper,
+            .date-filter-box,
+            #dynamic-filters,
+            .chart-container {
+                width: 100%;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader" class="loader-line"></div>
+
+    <!-- CONNECT SCREEN -->
+    <div id="connect-screen">
+        <div class="login-box">
+            <div class="tab-group">
+                <div class="tab active" id="tab-local" onclick="switchTab('local')">Local File</div>
+                <div class="tab" id="tab-cloud" onclick="switchTab('cloud')">OneDrive Cloud</div>
+            </div>
+
+            <!-- LOCAL MODE -->
+            <div id="mode-local">
+                <div style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;">
+                    <i class="fa-solid fa-file-excel"></i>
+                </div>
+                <h2 style="margin: 0 0 0.5rem 0; color: var(--text-main);">Excel Dashboard</h2>
+                <p style="color: var(--text-light); margin-bottom: 2rem; font-size: 0.95rem;">
+                    Open a local .xlsx file to view and update.
+                </p>
+
+                <label for="fileInput" class="file-drop-area" id="dropArea">
+                    <i class="fa-solid fa-cloud-arrow-up"
+                        style="font-size: 2rem; color: var(--text-light); margin-bottom: 1rem;"></i>
+                    <div style="font-weight: 600; color: var(--text-main);">Click to Select File</div>
+                    <div style="font-size: 0.8rem; color: var(--text-light);">or drag and drop here</div>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFileSelect(event)">
+                </label>
+            </div>
+
+            <!-- CLOUD MODE -->
+            <div id="mode-cloud" class="hidden">
+                <div style="font-size: 3rem; color: #0078D4; margin-bottom: 1rem;">
+                    <i class="fa-brands fa-microsoft"></i>
+                </div>
+                <h2 style="margin: 0 0 0.5rem 0; color: var(--text-main);">OneDrive Connect</h2>
+
+                <div id="auth-section">
+                    <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.95rem;">
+                        Connect to edit files directly on OneDrive.
+                    </p>
+                    <input type="text" id="clientIdInput" class="form-input" placeholder="Enter Client ID (from Azure)"
+                        style="margin-bottom: 1rem;">
+                    <button class="btn btn-primary" onclick="signIn()"
+                        style="width: 100%; justify-content: center; background: #0078D4; border-color: #0078D4;">
+                        Sign In with Microsoft
+                    </button>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem;">Requires Azure App Registration.</p>
+                </div>
+
+                <div id="file-picker-section" class="hidden">
+                    <p style="font-weight: 600; text-align: left; margin-bottom: 0.5rem;">Select an Excel File:</p>
+                    <div id="onedrive-list" class="file-list">
+                        <div style="padding: 1rem; color: #94a3b8;">Loading files...</div>
+                    </div>
+                    <button class="btn btn-white" onclick="signOut()" style="width: 100%; justify-content: center;">Sign
+                        Out</button>
+                </div>
+            </div>
+
+            <!-- Template Download Helper -->
+            <p
+                style="font-size: 0.8rem; color: #94a3b8; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                Need a template? <a href="#" onclick="downloadTemplate()" style="color: var(--primary);">Download
+                    Template</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="app-screen" class="hidden">
+        <nav class="flex items-center justify-between">
+            <div class="brand">
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Excel Dashboard <span class="live-text" id="status-badge"
+                        style="font-weight: 400; color: #94a3b8; font-size: 0.9rem;">| Local File</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="btn btn-white" onclick="toggleTheme()" title="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+                <div style="height: 20px; width: 1px; background: var(--border); margin: 0 0.5rem;"></div>
+                <button class="btn btn-white" onclick="location.reload()" title="Close File">
+                    <i class="fa-solid fa-folder-open"></i> Open New
+                </button>
+                <button class="btn btn-primary" onclick="showAddScreen()">
+                    <i class="fa-solid fa-plus"></i> Add Task
+                </button>
+                <button class="btn btn-success" onclick="saveAndDownload()" id="saveBtn">
+                    <i class="fa-solid fa-floppy-disk"></i> Save & Download
+                </button>
+            </div>
+        </nav>
+
+        <div class="container">
+
+            <div class="controls-bar">
+                <div class="search-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" class="form-input" placeholder="Search project, app, owner..."
+                        onkeyup="filterData()">
+                </div>
+                <div id="dynamic-filters" class="flex gap-2 flex-wrap"></div>
+
+                <div class="date-filter-box">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Target Date:</span>
+                    <input type="date" id="dateStart" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                    <span style="color: var(--text-light);">-</span>
+                    <input type="date" id="dateEnd" class="form-input" style="width: auto; padding: 0.4rem;"
+                        onchange="filterData()">
+                </div>
+
+                <label class="flex items-center gap-2" style="font-weight: 600; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="overdueFilter" onchange="filterData()"
+                        style="width: 16px; height: 16px;">
+                    <span style="color: var(--danger);">Overdue Only</span>
+                </label>
+
+                <button class="btn btn-white" onclick="resetFilters()" style="margin-left: auto;">Reset Filters</button>
+            </div>
+            <div class="grid-stats">
+                <div class="card">
+                    <div class="stat-label">Total Tasks</div>
+                    <div class="stat-value" id="v-total">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value" id="v-done" style="color: var(--success);">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Dev In-Progress</div>
+                    <div class="stat-value" id="v-dev" style="color: var(--primary);">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Yet to Start</div>
+                    <div class="stat-value" id="v-yet" style="color: var(--warning);">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">Overdue Items</div>
+                    <div class="stat-value" id="v-overdue" style="color: var(--danger);">0</div>
+                </div>
+            </div>
+
+            <div class="grid-charts">
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Workload by Owner</h4>
+                    <div class="chart-container">
+                        <canvas id="chartOwner"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Status Breakdown</h4>
+                    <div class="chart-container">
+                        <canvas id="chartStatus"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Tasks by Application</h4>
+                    <div class="chart-container">
+                        <canvas id="chartApps"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 style="margin: 0 0 1rem 0; font-weight: 700; color: var(--text-main);">Monthly Deadline Trend
+                    </h4>
+                    <div class="chart-container">
+                        <canvas id="chartTimeline"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-scroll">
+                    <table id="mainTable">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+
+    <!-- ADD TASK SCREEN -->
+    <div id="add-screen" class="hidden container">
+        <div class="page-header">
+            <button class="btn btn-white" onclick="showDashboard()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <h2>Add New Task</h2>
+        </div>
+        <div class="card form-card">
+            <div id="add-form-body"></div>
+            <div class="form-footer">
+                <button class="btn btn-primary" onclick="saveAdd()">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT TASK SCREEN -->
+    <div id="edit-screen" class="hidden container">
+        <div class="page-header">
+            <button class="btn btn-white" onclick="showDashboard()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <h2>Edit Task</h2>
+        </div>
+        <div class="card form-card">
+            <div id="edit-form-body"></div>
+            <div class="form-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger-ghost" onclick="deleteTask()"><i class="fa-solid fa-trash"></i> Delete
+                    Record</button>
+                <button class="btn btn-primary" onclick="saveEdit()">Update Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL STATE ---
+        let rawData = [];
+        let headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"]; // Defaults
+        let charts = { owner: null, status: null, apps: null, timeline: null };
+        let editingRow = null;
+        let mode = 'local'; // local | cloud
+        let accessToken = null;
+        let driveId = null;
+        let itemId = null;
+        let currentTableId = null;
+
+        // View State
+        let sortCol = null;
+        let sortAsc = true;
+        let currentPage = 1;
+        const rowsPerPage = 25;
+
+        // MSAL CONFIG (Initialized in signIn)
+        let msalInstance = null;
+
+        // --- INITIALIZATION ---
+        window.onload = async function () {
+            // 1. Protocol Handling (Redirect file:// to localhost)
+            if (window.location.protocol === 'file:') {
+                document.body.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#f3f4f6;">
+                        <h2 style="color:#1f2937">Initializing Dashboard...</h2>
+                        <p style="color:#6b7280;margin-bottom:20px">Redirecting to Local Server for OneDrive Access.</p>
+                        <a href="http://localhost:8000/excelDashboard.html" 
+                           style="padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:8px;font-weight:600;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+                           Click Here to Launch
+                        </a>
+                    </div>
+                `;
+                // Allow user to see message briefly then redirect
+                setTimeout(() => {
+                    window.location.href = "http://localhost:8000/excelDashboard.html";
+                }, 1500);
+                return;
+            }
+
+            // Init Theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+
+            // Drag and drop
+            const dropArea = document.getElementById('dropArea');
+            if (dropArea) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, preventDefaults, false);
+                });
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, highlight, false);
+                });
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, unhighlight, false);
+                });
+                dropArea.addEventListener('drop', handleDrop, false);
+            }
+
+            const storedCid = localStorage.getItem('azure_client_id');
+            if (storedCid) {
+                document.getElementById('clientIdInput').value = storedCid;
+                // Attempt Auto-Login
+                tryAutoLogin(storedCid);
+            }
+        };
+
+        async function tryAutoLogin(clientId) {
+            console.log("Attempting Auto-Login...");
+            try {
+                const msalApp = await initMsal();
+                if (!msalApp) return;
+
+                const accounts = msalApp.getAllAccounts();
+                if (accounts.length > 0) {
+                    const tokenRes = await msalApp.acquireTokenSilent({
+                        scopes: ["User.Read", "Files.ReadWrite"],
+                        account: accounts[0]
+                    });
+
+                    if (tokenRes && tokenRes.accessToken) {
+                        console.log("Auto-Login Successful");
+                        accessToken = tokenRes.accessToken;
+                        document.getElementById('auth-section').classList.add('hidden');
+                        document.getElementById('file-picker-section').classList.remove('hidden');
+                        listOneDriveFiles();
+                    }
+                }
+            } catch (e) {
+                console.warn("Auto-login failed (User usually needs to click Connect manually):", e);
+            }
+        }
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${t}`).classList.add('active');
+
+            document.getElementById('mode-local').classList.add('hidden');
+            document.getElementById('mode-cloud').classList.add('hidden');
+            document.getElementById(`mode-${t}`).classList.remove('hidden');
+            mode = t;
+        }
+
+        // --- AUTH & CLOUD ---
+        // Global MSAL Handler
+
+
+        async function initMsal() {
+            // CRITICAL: Check Protocol
+            if (window.location.protocol === 'file:') {
+                const correctUrl = "http://localhost:8000/excelDashboard.html";
+                alert("SECURITY BLOCK: Microsoft Login does not work with 'file://' addresses.\n\n" +
+                    "Please close this tab and open the Dashboard using this URL instead:\n\n" +
+                    correctUrl + "\n\n(You must use the Local Server we started)");
+                throw new Error("Wrong Protocol (file://). Use http://localhost:8000 instead.");
+            }
+
+            const clientId = document.getElementById('clientIdInput').value.trim();
+            if (!clientId) return null;
+
+            // Clean Redirect URI (No query params, no hash)
+            const redirectUri = window.location.origin + window.location.pathname;
+            console.log("Configured Redirect URI:", redirectUri);
+
+            if (!msalInstance) {
+                msalInstance = new msal.PublicClientApplication({
+                    auth: {
+                        clientId: clientId,
+                        authority: "https://login.microsoftonline.com/common",
+                        redirectUri: redirectUri
+                    },
+                    cache: { cacheLocation: "sessionStorage" }
+                });
+                await msalInstance.initialize();
+            }
+            return msalInstance;
+        }
+
+        async function signIn() {
+            try {
+                console.log("Sign In Initiated");
+                if (typeof msal === 'undefined') throw new Error("MSAL.js Library not loaded. Check internet connection.");
+
+                const clientId = document.getElementById('clientIdInput').value.trim();
+                if (!clientId) { alert("Please enter a Client ID"); return; }
+                localStorage.setItem('azure_client_id', clientId);
+
+                const msalApp = await initMsal();
+                if (!msalApp) throw new Error("Failed to initialize MSAL. Client ID might be missing or invalid.");
+
+                console.log("MSAL Initialized");
+
+                const accounts = msalApp.getAllAccounts();
+                let tokenRes;
+
+                if (accounts.length > 0) {
+                    try {
+                        console.log("Attempting silent token acquisition...");
+                        tokenRes = await msalApp.acquireTokenSilent({
+                            scopes: ["User.Read", "Files.ReadWrite"],
+                            account: accounts[0]
+                        });
+                    } catch (e) {
+                        console.warn("Silent token failed, using popup:", e);
+                        tokenRes = await msalApp.loginPopup({ scopes: ["User.Read", "Files.ReadWrite"] });
+                    }
+                } else {
+                    console.log("No accounts found, using popup...");
+                    tokenRes = await msalApp.loginPopup({ scopes: ["User.Read", "Files.ReadWrite"] });
+                }
+
+                if (!tokenRes || !tokenRes.accessToken) throw new Error("No access token received.");
+
+                accessToken = tokenRes.accessToken;
+                console.log("Login Successful");
+
+                // Show file picker
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('file-picker-section').classList.remove('hidden');
+                listOneDriveFiles();
+
+            } catch (e) {
+                console.error("Login Critical Error:", e);
+                const redirectUri = window.location.origin + window.location.pathname;
+
+                if (e.message.includes("AADSTS50011")) {
+                    alert("Azure Configuration Error (Redirect URI Mismatch)\n\n" +
+                        "Please go to your Azure Portal > Authentication tab.\n" +
+                        "Ensure this EXACT URL is listed in 'Single-page application' or 'Web' Redirect URIs:\n\n" +
+                        redirectUri + "\n\n" +
+                        "Also ensure the scheme (http/https) matches exactly.\n" +
+                        "Error Details: " + e.message);
+                } else if (e.name === "BrowserAuthError" && e.errorMessage.includes("interaction_in_progress")) {
+                    alert("A login popup is already open. Please look for it, close it, or reload this page.");
+                } else {
+                    alert("Login failed: " + e.message);
+                }
+            }
+        }
+
+
+
+        function signOut() {
+            sessionStorage.clear();
+            location.reload();
+        }
+
+        async function callGraph(endpoint, method = 'GET', body = null) {
+            const getHeaders = () => ({
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            });
+
+            let url = endpoint.startsWith('http') ? endpoint : `https://graph.microsoft.com/v1.0${endpoint}`;
+
+            // Cache busting for GET
+            if (method === 'GET') {
+                const separator = url.includes('?') ? '&' : '?';
+                url += `${separator}_t=${Date.now()}`;
+            }
+
+            let opts = { method: method, headers: getHeaders() };
+            if (body) opts.body = JSON.stringify(body);
+
+            let res = await fetch(url, opts);
+
+            // Handle Token Expiry (401)
+            if (res.status === 401) {
+                console.warn("Access Token expired (401). Attempting silent refresh...");
+                try {
+                    const msalApp = await initMsal();
+                    const accounts = msalApp.getAllAccounts();
+                    if (accounts.length > 0) {
+                        const tokenRes = await msalApp.acquireTokenSilent({
+                            scopes: ["User.Read", "Files.ReadWrite"],
+                            account: accounts[0]
+                        });
+                        accessToken = tokenRes.accessToken;
+                        // Retry Request
+                        opts.headers = getHeaders();
+                        res = await fetch(url, opts);
+                    }
+                } catch (e) {
+                    console.error("Token refresh failed:", e);
+                    // Do not throw here, let the next check resolve it as a standard error
+                }
+            }
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Graph Error ${res.status}: ${text}`);
+            }
+
+            // Handle 204 No Content (DELETE success)
+            if (res.status === 204) return {};
+
+            // Handle Empty Body for other statuses if needed
+            const text = await res.text();
+            return text ? JSON.parse(text) : {};
+        }
+
+        // Navigation State
+        let currentFolderId = 'root';
+        let breadcrumbs = [{ id: 'root', name: 'Home' }];
+
+        async function listOneDriveFiles(folderId = 'root', folderName = null) {
+            currentFolderId = folderId;
+            if (folderName) {
+                if (folderId === 'root') breadcrumbs = [{ id: 'root', name: 'Home' }];
+                else if (breadcrumbs[breadcrumbs.length - 1].id !== folderId) breadcrumbs.push({ id: folderId, name: folderName });
+            } else if (folderId === 'root') {
+                breadcrumbs = [{ id: 'root', name: 'Home' }];
+            }
+
+            const listContainer = document.getElementById('onedrive-list');
+            listContainer.innerHTML = '<div style="padding:1rem">Scanning...</div>';
+
+            try {
+                const endpoint = folderId === 'root'
+                    ? '/me/drive/root/children?$select=id,name,file,folder'
+                    : `/me/drive/items/${folderId}/children?$select=id,name,file,folder`;
+
+                const data = await callGraph(endpoint);
+                const items = data.value.filter(f => f.folder || (f.file && f.name.endsWith('.xlsx')));
+
+                renderFileList(items);
+            } catch (e) {
+                listContainer.innerHTML = `<div style="padding:1rem;color:red">Error: ${e.message}</div>`;
+            }
+        }
+
+        function renderFileList(items) {
+            const listContainer = document.getElementById('onedrive-list');
+            listContainer.innerHTML = '';
+
+            // Breadcrumbs
+            const navDiv = document.createElement('div');
+            navDiv.style.padding = '0.5rem';
+            navDiv.style.borderBottom = '1px solid var(--border)';
+            navDiv.style.background = '#f8fafc';
+            navDiv.style.display = 'flex';
+            navDiv.style.gap = '0.5rem';
+
+            if (currentFolderId !== 'root') {
+                const backBtn = document.createElement('button');
+                backBtn.className = 'btn btn-white';
+                backBtn.style.padding = '0.2rem 0.5rem';
+                backBtn.style.fontSize = '0.8rem';
+                backBtn.innerHTML = '<i class="fa-solid fa-arrow-up"></i> Up';
+                backBtn.onclick = () => {
+                    breadcrumbs.pop();
+                    const prev = breadcrumbs[breadcrumbs.length - 1];
+                    listOneDriveFiles(prev.id);
+                };
+                navDiv.appendChild(backBtn);
+            }
+
+            const pathSpan = document.createElement('span');
+            pathSpan.style.alignSelf = 'center';
+            pathSpan.style.fontSize = '0.8rem';
+            pathSpan.style.color = 'var(--text-light)';
+            pathSpan.innerText = breadcrumbs.map(b => b.name).join(' / ');
+            navDiv.appendChild(pathSpan);
+            listContainer.appendChild(navDiv);
+
+            if (items.length === 0) {
+                listContainer.innerHTML += '<div style="padding:1rem;color:#94a3b8">No items found.</div>';
+                return;
+            }
+
+            items.sort((a, b) => (a.folder && !b.folder) ? -1 : 1);
+
+            items.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                if (f.folder) {
+                    div.innerHTML = `<i class="fa-solid fa-folder" style="color:#f59e0b"></i> <span>${f.name}</span>`;
+                    div.onclick = () => listOneDriveFiles(f.id, f.name);
+                } else {
+                    div.innerHTML = `<i class="fa-solid fa-file-excel"></i> <span>${f.name}</span>`;
+                    div.onclick = () => loadCloudFile(f.id, f.name);
+                }
+                listContainer.appendChild(div);
+            });
+        }
+
+        async function loadCloudFile(id, name, keepFilters = false) {
+            let savedFilters = null;
+            if (keepFilters) savedFilters = saveFilterState();
+            showLoader(true);
+            itemId = id;
+            console.log("Loading file:", name, id);
+
+            try {
+                let rows = [];
+                let tableId = null;
+
+                // 1. Try finding tables first
+                try {
+                    const tables = await callGraph(`/me/drive/items/${id}/workbook/tables`);
+                    if (tables.value && tables.value.length > 0) {
+                        tableId = tables.value[0].id;
+                        const range = await callGraph(`/me/drive/items/${id}/workbook/tables/${tableId}/range?select=values`);
+                        rows = range.values;
+                    }
+                } catch (e) {
+                    console.log("No table found or error checking tables:", e);
+                }
+
+                // 2. Fallback: Read specific worksheet or first one
+                if (!rows || rows.length === 0) {
+                    console.log("Attempting fallback to Worksheet UsedRange...");
+                    try {
+                        const sheets = await callGraph(`/me/drive/items/${id}/workbook/worksheets`);
+
+                        if (sheets.value && sheets.value.length > 0) {
+                            // Try to find the exact sheet "Project Details" (case insensitive)
+                            let targetSheet = sheets.value.find(s => s.name.toLowerCase() === "project details");
+
+                            // If not found, default to the first one
+                            if (!targetSheet) {
+                                targetSheet = sheets.value.sort((a, b) => a.position - b.position)[0];
+                                console.log("Specific sheet 'Project Details' not found. Defaulting to first sheet:", targetSheet.name);
+                            } else {
+                                console.log("Found specific sheet:", targetSheet.name);
+                            }
+
+                            const range = await callGraph(`/me/drive/items/${id}/workbook/worksheets/${targetSheet.id}/usedRange?select=values`);
+                            rows = range.values;
+                        } else {
+                            throw new Error("No worksheets found.");
+                        }
+                    } catch (e) {
+                        console.error("Fallback failed:", e);
+                        alert("Failed to read file (No Table & No Sheets).\n" + e.message);
+                        showLoader(false);
+                        return;
+                    }
+                }
+
+                if (!rows || rows.length === 0) {
+                    alert("File appears empty.");
+                    showLoader(false);
+                    return;
+                }
+
+                // 3. Process Data
+                if (rows.length < 2) {
+                    // Header only or empty
+                    rawData = [];
+                    headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
+                } else {
+                    let rawHeaders = rows[0].map(h => String(h).trim());
+
+                    // Fuzzy Map Attempt
+                    const map = {
+                        "APP": ["APP", "APPLICATION", "SYSTEM"],
+                        "PROJECT": ["PROJECT", "INITIATIVE", "TITLE", "NAME"],
+                        "DELIVERABLES": ["DELIVERABLES", "TASK", "ITEM", "DESCRIPTION"],
+                        "OWNER": ["OWNER", "ASSIGNED TO", "LEAD", "RESPONSIBLE"],
+                        "TARGET DATE": ["TARGET DATE", "DUE DATE", "DEADLINE", "END DATE"],
+                        "STATUS": ["STATUS", "STATE", "STAGE"],
+                        "REMARKS": ["REMARKS", "COMMENTS", "NOTES"]
+                    };
+
+                    // Create a normalized header list
+                    headers = Object.keys(map); // Force our standard headers
+
+                    rawData = rows.slice(1).map((r, i) => {
+                        const obj = { _rowIndex: i };
+
+                        // For each standard header, find the best matching source column
+                        headers.forEach((stdH, stdIdx) => {
+                            // 1. Try name match
+                            let sourceIdx = rawHeaders.findIndex(rh => map[stdH].includes(rh.toUpperCase()));
+
+                            // 2. Fallback to index if no name match
+                            if (sourceIdx === -1) sourceIdx = stdIdx;
+
+                            // Get value
+                            let val = r[sourceIdx] !== undefined ? r[sourceIdx] : "";
+
+                            // Date Cleanup
+                            if (stdH === "TARGET DATE" && val) {
+                                if (typeof val === 'number') {
+                                    // Excel Serial Date
+                                    const d = new Date((val - (25567 + 2)) * 86400 * 1000);
+                                    if (!isNaN(d.getTime())) val = d.toISOString().split('T')[0];
+                                } else {
+                                    // String try parse
+                                    const d = new Date(val);
+                                    if (!isNaN(d.getTime())) val = d.toISOString().split('T')[0];
+                                }
+                            }
+
+                            obj[stdH] = val;
+                        });
+                        return obj;
+                    });
+                }
+
+                document.getElementById('status-badge').innerText = `| Cloud: ${name}`;
+
+                // UI Status
+                // UI Status
+                const saveBtn = document.getElementById('saveBtn');
+                currentTableId = tableId; // Cache it
+                if (tableId) {
+                    saveBtn.innerHTML = '<i class="fa-solid fa-cloud"></i> Auto-Sync Active';
+                    saveBtn.className = 'btn btn-white';
+                    saveBtn.title = "Changes are saved automatically to OneDrive.";
+                    saveBtn.disabled = false; // Enable it so it looks active (though click does nothing special)
+                } else {
+                    saveBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Read Only (Editing Disabled)';
+                    saveBtn.className = 'btn btn-danger-ghost';
+                    saveBtn.disabled = true;
+                    saveBtn.title = "Editing is disabled because no Excel Table was found. Open file in Excel and Insert > Table to enable editing.";
+
+                    // Optional: Show a one-time toast or alert
+                    setTimeout(() => alert("NOTICE: File is in Read-Only Mode.\n\nTo enable editing:\n1. Open this file in Excel.\n2. Select your data.\n3. Go to Insert > Table.\n4. Save and reload here."), 500);
+                }
+
+                showApp();
+                initDashboard();
+                if (keepFilters && savedFilters) restoreFilterState(savedFilters);
+
+            } catch (e) {
+                alert("Critical Load Error: " + e.message);
+                console.error(e);
+            }
+            showLoader(false);
+        }
+
+        // --- LOCAL FILE HANDLING & COMMON UTILS ---
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        function highlight(e) { document.getElementById('dropArea').classList.add('dragover'); }
+        function unhighlight(e) { document.getElementById('dropArea').classList.remove('dragover'); }
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            const file = files[0];
+            const reader = new FileReader();
+
+            showLoader(true);
+
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                    if (json.length >= 0) {
+                        rawData = json;
+                        if (json.length > 0) headers = Object.keys(json[0]);
+                        else headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
+
+                        mode = 'local';
+                        document.getElementById('status-badge').innerText = `| Local: ${file.name}`;
+                        document.getElementById('saveBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save & Download';
+                        document.getElementById('saveBtn').className = 'btn btn-success';
+                        document.getElementById('saveBtn').disabled = false;
+
+                        showApp();
+                        initDashboard();
+                    }
+                } catch (err) {
+                    alert("Error reading file: " + err.message);
+                }
+                showLoader(false);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            setTheme(target);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            if (rawData.length > 0) filterData();
+        }
+
+        function downloadTemplate() {
+            const row = { "APP": "Example", "PROJECT": "Project X", "DELIVERABLES": "Notes", "OWNER": "User", "TARGET DATE": "2025-01-01", "STATUS": "YET TO START", "REMARKS": "" };
+            const ws = XLSX.utils.json_to_sheet([row]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+            XLSX.writeFile(wb, "Dashboard_Template.xlsx");
+        }
+
+        function saveAndDownload() {
+            if (mode === 'cloud') {
+                return; // Auto-sync is handled in Cloud mode
+            }
+            if (!rawData || rawData.length === 0) { alert("No data to save."); return; }
+            showLoader(true);
+            try {
+                const ws = XLSX.utils.json_to_sheet(rawData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+                const d = new Date();
+                const dateStr = d.toLocaleDateString('en-GB').replace(/\//g, '-');
+                const timeStr = d.toLocaleTimeString('en-GB').replace(/:/g, '-');
+                XLSX.writeFile(wb, `Project_Dashboard_${dateStr}_${timeStr}.xlsx`);
+            } catch (e) { alert("Error saving file: " + e.message); }
+            showLoader(false);
+        }
+
+        function showApp() {
+            document.getElementById('connect-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+        }
+
+        function showLoader(show) {
+            document.getElementById('loader').style.display = show ? 'block' : 'none';
+        }
+
+        // --- CORE LOGIC ---
+        function initDashboard() {
+            if (!sortCol) sortCol = headers.find(h => h.toUpperCase() === 'TARGET DATE') || headers[0];
+            buildFilters();
+            filterData();
+        }
+
+        function buildFilters() {
+            const container = document.getElementById('dynamic-filters');
+            container.innerHTML = '';
+            const viableFilters = ['APP', 'STATUS', 'OWNER', 'PROJECT'];
+
+            viableFilters.forEach(colName => {
+                const realHeader = headers.find(h => h.toUpperCase() === colName);
+                if (!realHeader) return;
+
+                const values = [...new Set(rawData.map(r => r[realHeader]))].filter(v => v).sort();
+
+                const select = document.createElement('select');
+                select.className = 'form-input';
+                select.style.minWidth = '150px';
+                select.setAttribute('data-col', realHeader);
+                select.onchange = filterData;
+
+                let opts = `<option value="All">${realHeader}</option>`;
+                values.forEach(v => { opts += `<option value="${v}">${v}</option>`; });
+                select.innerHTML = opts;
+                container.appendChild(select);
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            document.getElementById('overdueFilter').checked = false;
+            document.querySelectorAll('#dynamic-filters select').forEach(d => d.value = 'All');
+            filterData();
+        }
+
+        function filterData() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filters = document.querySelectorAll('#dynamic-filters select');
+
+            let filtered = rawData.filter(row => {
+                // 1. Dropdown Filters
+                for (let sel of filters) {
+                    const col = sel.getAttribute('data-col');
+                    if (sel.value !== 'All' && row[col] !== sel.value) return false;
+                }
+                // 2. Global Search
+                if (search) {
+                    const rowStr = Object.values(row).join(' ').toLowerCase();
+                    if (!rowStr.includes(search)) return false;
+                }
+                // 3. Overdue Filter
+                const overdueOnly = document.getElementById('overdueFilter').checked;
+                if (overdueOnly) {
+                    const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                    const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
+                    if (keyTarget) {
+                        const rowDateStr = row[keyTarget];
+                        const rowStatus = row[keyStatus] || '';
+                        if (!rowDateStr) return false;
+
+                        let rDate;
+                        if (typeof rowDateStr === 'number') rDate = new Date((rowDateStr - (25567 + 2)) * 86400 * 1000);
+                        else rDate = new Date(rowDateStr);
+
+                        rDate.setHours(0, 0, 0, 0);
+                        const today = new Date(); today.setHours(0, 0, 0, 0);
+                        if (isNaN(rDate.getTime()) || rDate >= today) return false;
+
+                        const validStatuses = ['YET TO START', 'DEV IN-PROGRESS', 'DEV COMPLETED'];
+                        if (!validStatuses.some(s => String(rowStatus).toUpperCase().includes(s))) return false;
+                    }
+                }
+
+                // 4. Date Range
+                const dateStart = document.getElementById('dateStart').value;
+                const dateEnd = document.getElementById('dateEnd').value;
+                if (dateStart || dateEnd) {
+                    const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                    if (keyTarget) {
+                        const rowDateStr = row[keyTarget];
+                        if (!rowDateStr) return false;
+
+                        let rDate;
+                        if (typeof rowDateStr === 'number') rDate = new Date((rowDateStr - (25567 + 2)) * 86400 * 1000);
+                        else rDate = new Date(rowDateStr);
+
+                        if (isNaN(rDate.getTime())) return false;
+                        if (dateStart && rDate < new Date(dateStart)) return false;
+                        if (dateEnd) {
+                            const d = new Date(dateEnd); d.setHours(23, 59, 59);
+                            if (rDate > d) return false;
+                        }
+                    }
+                }
+                return true;
+            });
+
+            // Sort
+            if (sortCol) {
+                filtered.sort((a, b) => {
+                    let valA = a[sortCol] || "";
+                    let valB = b[sortCol] || "";
+                    if (typeof valA === 'string') valA = valA.toLowerCase();
+                    if (typeof valB === 'string') valB = valB.toLowerCase();
+                    if (valA < valB) return sortAsc ? -1 : 1;
+                    if (valA > valB) return sortAsc ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            updateStats(filtered);
+            updateCharts(filtered);
+            renderTable(filtered);
+        }
+
+        // --- RENDERING ---
+        function renderTable(data) {
+            const total = data.length;
+            const totalPages = Math.ceil(total / rowsPerPage);
+            if (currentPage > totalPages) currentPage = 1;
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = data.slice(start, end);
+
+            const thead = document.querySelector('#mainTable thead');
+            const tbody = document.querySelector('#mainTable tbody');
+            thead.innerHTML = ''; tbody.innerHTML = '';
+
+            const dateCols = ['DEV TEST CONDUCTED ON', 'QA TEST CONDUCTED ON', 'ALPHA TEST CONDUCTED ON', 'TARGET DATE'];
+
+            let trH = document.createElement('tr');
+            headers.forEach(h => {
+                let th = document.createElement('th');
+                th.innerHTML = h;
+                if (sortCol === h) th.innerHTML += sortAsc ? ' <i class="fa-solid fa-caret-up"></i>' : ' <i class="fa-solid fa-caret-down"></i>';
+                th.onclick = () => {
+                    if (sortCol === h) sortAsc = !sortAsc;
+                    else { sortCol = h; sortAsc = true; }
+                    filterData();
+                };
+                const hUpper = h.toUpperCase();
+                if (dateCols.includes(hUpper)) th.style.minWidth = '140px';
+                else if (hUpper === 'DELIVERABLES' || hUpper === 'REMARKS') th.style.minWidth = '300px';
+                else if (hUpper === 'PROJECT' || hUpper === 'APP') th.style.minWidth = '180px';
+                trH.appendChild(th);
+            });
+            thead.appendChild(trH);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${headers.length}" style="text-align:center; padding: 2rem; color: #94a3b8;">No data found</td></tr>`;
+            } else {
+                pageData.forEach(row => {
+                    let tr = document.createElement('tr');
+                    headers.forEach(key => {
+                        let td = document.createElement('td');
+                        let val = row[key];
+                        if (val === undefined || val === null) val = "";
+
+                        if (dateCols.includes(key.toUpperCase()) && val) {
+                            if (typeof val === 'number') {
+                                const d = new Date((val - (25567 + 2)) * 86400 * 1000);
+                                val = d.toISOString().split('T')[0];
+                            } else {
+                                try {
+                                    const d = new Date(val);
+                                    if (!isNaN(d.getTime())) val = d.toISOString().split('T')[0];
+                                } catch (e) { }
+                            }
+                        }
+
+                        if (key.toUpperCase() === 'STATUS') {
+                            let badgeClass = 'badge-gray';
+                            const vLower = String(val).toLowerCase();
+                            if (vLower.includes('completed') || vLower.includes('go-live')) badgeClass = 'badge-success';
+                            else if (vLower.includes('dev')) badgeClass = 'badge-info';
+                            else if (vLower.includes('progress')) badgeClass = 'badge-warning';
+                            td.innerHTML = `<span class="badge ${badgeClass}">${val}</span>`;
+                        } else {
+                            td.innerText = val;
+                        }
+
+                        td.onclick = () => showEditScreen(row);
+                        td.style.cursor = 'pointer';
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+            }
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            const div = document.getElementById('pagination');
+            div.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    let btn = document.createElement('div');
+                    btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+                    btn.innerText = i;
+                    btn.onclick = () => { currentPage = i; filterData(); };
+                    div.appendChild(btn);
+                } else if (div.lastChild && div.lastChild.innerText !== '...') {
+                    let dots = document.createElement('div');
+                    dots.innerText = '...';
+                    dots.style.alignSelf = 'center';
+                    div.appendChild(dots);
+                }
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('v-total').innerText = data.length;
+            const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
+            if (keyStatus) {
+                const done = data.filter(r => String(r[keyStatus] || '').toUpperCase().includes('COMPLETED') || String(r[keyStatus] || '').toUpperCase().includes('GO-LIVE')).length;
+                const dev = data.filter(r => String(r[keyStatus] || '').toUpperCase().includes('DEV IN-PROGRESS')).length;
+                const yet = data.filter(r => String(r[keyStatus] || '').toUpperCase().includes('YET TO START')).length;
+
+                const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
+                let overdue = 0;
+                if (keyTarget) {
+                    const today = new Date(); today.setHours(0, 0, 0, 0);
+                    overdue = data.filter(r => {
+                        const s = String(r[keyStatus] || '').toUpperCase();
+                        let dVal = r[keyTarget];
+                        if (!dVal) return false;
+
+                        let d;
+                        if (typeof dVal === 'number') d = new Date((dVal - (25567 + 2)) * 86400 * 1000);
+                        else d = new Date(dVal);
+                        if (isNaN(d.getTime())) return false;
+
+                        if (d >= today) return false;
+                        return ['YET TO START', 'DEV IN-PROGRESS'].some(st => s.includes(st));
+                    }).length;
+                }
+
+                document.getElementById('v-done').innerText = done;
+                document.getElementById('v-dev').innerText = dev;
+                document.getElementById('v-yet').innerText = yet;
+                document.getElementById('v-overdue').innerText = overdue;
+            }
+        }
+
+        function updateCharts(data) {
+            const keyStatus = headers.find(h => h.toUpperCase() === 'STATUS');
+            const keyOwner = headers.find(h => h.toUpperCase() === 'OWNER');
+            const keyApp = headers.find(h => h.toUpperCase() === 'APP');
+
+            const sCounts = {}, oCounts = {}, aCounts = {};
+            data.forEach(r => {
+                const s = r[keyStatus] || 'Unknown';
+                const o = r[keyOwner] || 'Unassigned';
+                const a = r[keyApp] || 'Other';
+                sCounts[s] = (sCounts[s] || 0) + 1;
+                oCounts[o] = (oCounts[o] || 0) + 1;
+                aCounts[a] = (aCounts[a] || 0) + 1;
+            });
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const colors = isDark ? { primary: '#818cf8', success: '#34d399', warning: '#fbbf24', danger: '#f87171', info: '#60a5fa', purple: '#a78bfa', pink: '#f472b6', cyan: '#22d3ee', slate: '#94a3b8' }
+                : { primary: '#4f46e5', success: '#059669', warning: '#d97706', danger: '#dc2626', info: '#2563eb', purple: '#7c3aed', pink: '#db2777', cyan: '#0891b2', slate: '#475569' };
+            const textColor = isDark ? '#e2e8f0' : '#64748b';
+
+            if (charts.status) charts.status.destroy();
+            charts.status = new Chart(document.getElementById('chartStatus'), {
+                type: 'doughnut',
+                data: { labels: Object.keys(sCounts), datasets: [{ data: Object.values(sCounts), backgroundColor: [colors.success, colors.info, colors.warning, colors.danger, colors.slate, colors.purple], borderWidth: 0 }] },
+                options: { sensitive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: textColor } } } }
+            });
+
+            if (charts.apps) charts.apps.destroy();
+            charts.apps = new Chart(document.getElementById('chartApps'), {
+                type: 'bar',
+                data: { labels: Object.keys(aCounts), datasets: [{ label: 'Tasks', data: Object.values(aCounts), backgroundColor: colors.purple, borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor } }, y: { ticks: { color: textColor } } }, plugins: { legend: { display: false } } }
+            });
+
+            if (charts.owner) charts.owner.destroy();
+            charts.owner = new Chart(document.getElementById('chartOwner'), {
+                type: 'bar',
+                data: { labels: Object.keys(oCounts), datasets: [{ label: 'Tasks', data: Object.values(oCounts), backgroundColor: colors.success, borderRadius: 4 }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor } }, y: { ticks: { color: textColor } } }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function saveFilterState() {
+            const fApp = document.getElementById('filterApp');
+            const fProject = document.getElementById('filterProject');
+            const fOwner = document.getElementById('filterOwner');
+            const fStatus = document.getElementById('filterStatus');
+            const fSort = document.getElementById('sortSelect');
+            return {
+                app: fApp ? fApp.value : '',
+                project: fProject ? fProject.value : '',
+                owner: fOwner ? fOwner.value : '',
+                status: fStatus ? fStatus.value : '',
+                sort: fSort ? fSort.value : ''
+            };
+        }
+
+        function restoreFilterState(state) {
+            if (!state) return;
+            if (state.app) document.getElementById('filterApp').value = state.app;
+            if (state.project) document.getElementById('filterProject').value = state.project;
+            if (state.owner) document.getElementById('filterOwner').value = state.owner;
+            if (state.status) document.getElementById('filterStatus').value = state.status;
+            if (state.sort) document.getElementById('sortSelect').value = state.sort;
+            filterData(); // Re-apply
+        }
+
+        function showDashboard() {
+            document.getElementById('add-screen').classList.add('hidden');
+            document.getElementById('edit-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            editingRow = null;
+            // No need to clear filters here using code, just show the div
+        }
+
+        function showAddScreen() {
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('edit-screen').classList.add('hidden');
+            document.getElementById('add-screen').classList.remove('hidden');
+            renderFormFields(document.getElementById('add-form-body'), null, 'add');
+        }
+
+        function showEditScreen(row) {
+            editingRow = row;
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('add-screen').classList.add('hidden');
+            document.getElementById('edit-screen').classList.remove('hidden');
+            renderFormFields(document.getElementById('edit-form-body'), row, 'edit');
+        }
+
+        function renderFormFields(container, row, prefix) {
+            container.innerHTML = '';
+            headers.forEach(h => {
+                let val = row ? row[h] : '';
+                if (val === undefined || val === null) val = '';
+
+                let hUpper = h.toUpperCase();
+
+                if (['TARGET DATE'].includes(hUpper) && val) {
+                    if (typeof val === 'number') {
+                        const d = new Date((val - (25567 + 2)) * 86400 * 1000);
+                        val = d.toISOString().split('T')[0];
+                    } else {
+                        try {
+                            const d = new Date(val);
+                            if (!isNaN(d.getTime())) val = d.toISOString().split('T')[0];
+                        } catch (e) { }
+                    }
+                }
+
+                let inputHtml = '';
+                const id = `${prefix}-${sanitize(h)}`;
+
+                if (hUpper === 'STATUS') {
+                    const statusOptions = ["YET TO START", "DEV IN-PROGRESS", "DEV COMPLETED", "QA TEST", "ALPHA TEST", "BETA TEST", "READY FOR PRODUCTION", "GO-LIVE (COMPLETED)"];
+                    let opts = statusOptions.map(opt => `<option value="${opt}" ${String(val).toUpperCase() === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                    if (val && !statusOptions.includes(String(val).toUpperCase())) opts += `<option value="${val}" selected>${val}</option>`;
+                    inputHtml = `<select class="form-input-field" id="${id}">${opts}</select>`;
+                }
+                else if (['DELIVERABLES', 'REMARKS'].includes(hUpper)) {
+                    inputHtml = `<textarea class="form-input-field" id="${id}" rows="4">${val}</textarea>`;
+                }
+                else if (hUpper === 'TARGET DATE') {
+                    inputHtml = `<input type="date" class="form-input-field" id="${id}" value="${val}">`;
+                }
+                else if (['APP', 'PROJECT', 'OWNER'].includes(hUpper)) {
+                    // Auto-complete logic
+                    const uniqueVals = [...new Set(rawData.map(r => r[h]))].filter(v => v).sort();
+                    const datalistId = `list-${id}`;
+                    let options = uniqueVals.map(v => `<option value="${v}">`).join('');
+
+                    inputHtml = `
+                        <input class="form-input-field" id="${id}" list="${datalistId}" value="${val}" autocomplete="off">
+                        <datalist id="${datalistId}">${options}</datalist>
+                    `;
+                }
+                else {
+                    inputHtml = `<input class="form-input-field" id="${id}" value="${val}">`;
+                }
+
+                container.innerHTML += `
+                    <div class="input-group">
+                        <label class="form-label">${h}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+            });
+        }
+
+        function sanitize(str) { return str.replace(/[^a-zA-Z0-9]/g, ''); }
+
+        function getFormData(prefix) {
+            const newRow = {};
+            headers.forEach(h => {
+                const el = document.getElementById(`${prefix}-${sanitize(h)}`);
+                if (el) newRow[h] = el.value.trim();
+            });
+            return newRow;
+        }
+
+        async function saveAdd() {
+            try {
+                // Checkpoint 1
+                console.log("Debug: Starting saveAdd");
+
+                const newRow = getFormData('add');
+                if (!newRow["PROJECT"] || !newRow["STATUS"]) {
+                    alert("Validation Error: Project Name and Status are required!");
+                    return;
+                }
+
+                if (mode === 'cloud') {
+                    const btn = document.getElementById('saveBtn');
+                    if (btn.innerText.includes("Read Only")) {
+                        alert("Stop: File is Read-Only.");
+                        return;
+                    }
+
+                    showLoader(true);
+
+                    // Checkpoint 2
+                    console.log("Debug: Fetching tables...");
+                    const tables = await callGraph(`/me/drive/items/${itemId}/workbook/tables`);
+                    if (!tables.value || tables.value.length === 0) throw new Error("No Table found.");
+                    const tableId = tables.value[0].id;
+
+                    // Checkpoint 3
+                    console.log("Debug: Table ID found:", tableId);
+
+                    const columnsData = await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/columns`);
+                    const tableColumns = columnsData.value.map(c => c.name.toUpperCase());
+
+                    // Checkpoint 4
+                    console.log("Debug: Columns fetched:", tableColumns.join(", "));
+
+                    // Mapping
+                    const map = {
+                        "APP": ["APP", "APPLICATION", "SYSTEM"],
+                        "PROJECT": ["PROJECT", "INITIATIVE", "TITLE", "NAME", "PROJECT NAME"],
+                        "DELIVERABLES": ["DELIVERABLES", "TASK", "ITEM", "DESCRIPTION"],
+                        "OWNER": ["OWNER", "ASSIGNED TO", "LEAD", "RESPONSIBLE"],
+                        "TARGET DATE": ["TARGET DATE", "DUE DATE", "DEADLINE", "END DATE"],
+                        "STATUS": ["STATUS", "STATE", "STAGE"],
+                        "REMARKS": ["REMARKS", "COMMENTS", "NOTES"]
+                    };
+
+                    const rowArray = tableColumns.map(colName => {
+                        const stdKey = Object.keys(map).find(k =>
+                            map[k].some(alias => colName.includes(alias)) || k === colName
+                        );
+                        return stdKey ? (newRow[stdKey] || "") : "";
+                    });
+
+                    // Checkpoint 5
+                    console.log("Debug: Payload:", JSON.stringify(rowArray));
+
+                    const postRes = await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/rows`, 'POST', {
+                        values: [rowArray]
+                    });
+
+                    // Checkpoint 6
+                    console.log("Debug: POST Success:", postRes);
+
+                    alert("Task Added Successfully!");
+                    await loadCloudFile(itemId, "OneDrive File");
+                    showDashboard();
+
+                } else {
+                    rawData.push(newRow);
+                    filterData();
+                    showDashboard();
+                }
+            } catch (e) {
+                console.error("CRITICAL SAVE ERROR:", e);
+                alert("Error during save: " + e.message);
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        async function saveEdit() {
+            if (!editingRow) return;
+
+            // Validation
+            const newRow = getFormData('edit');
+            if (!newRow["PROJECT"] || !newRow["STATUS"]) {
+                alert("Project Name and Status are required!");
+                return;
+            }
+
+            if (mode === 'cloud') {
+                const btn = document.getElementById('saveBtn');
+                if (btn.innerText.includes("Read Only")) {
+                    alert("Cannot update: Read-Only Mode.");
+                    return;
+                }
+
+                if (typeof editingRow._rowIndex === 'undefined') { alert("Missing row index."); return; }
+
+                showLoader(true);
+                try {
+                    const tables = await callGraph(`/me/drive/items/${itemId}/workbook/tables`);
+                    if (!tables.value || tables.value.length === 0) throw new Error("No Table found.");
+                    const tableId = tables.value[0].id;
+
+                    // Get Columns
+                    const columnsData = await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/columns`);
+                    const tableColumns = columnsData.value.map(c => c.name.toUpperCase());
+
+                    const map = {
+                        "APP": ["APP", "APPLICATION", "SYSTEM"],
+                        "PROJECT": ["PROJECT", "INITIATIVE", "TITLE", "NAME"],
+                        "DELIVERABLES": ["DELIVERABLES", "TASK", "ITEM", "DESCRIPTION"],
+                        "OWNER": ["OWNER", "ASSIGNED TO", "LEAD", "RESPONSIBLE"],
+                        "TARGET DATE": ["TARGET DATE", "DUE DATE", "DEADLINE", "END DATE"],
+                        "STATUS": ["STATUS", "STATE", "STAGE"],
+                        "REMARKS": ["REMARKS", "COMMENTS", "NOTES"]
+                    };
+
+                    const rowArray = tableColumns.map(colName => {
+                        const stdKey = Object.keys(map).find(k => map[k].includes(colName) || k === colName);
+                        return stdKey ? (newRow[stdKey] || "") : "";
+                    });
+
+                    await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/rows/itemAt(index=${editingRow._rowIndex})`, 'PATCH', {
+                        values: [rowArray]
+                    });
+
+                    alert("Task updated successfully!");
+                    await loadCloudFile(itemId, "OneDrive File");
+                    showDashboard();
+                } catch (e) { alert("Sync Error: " + e.message); }
+                showLoader(false);
+            } else {
+                Object.assign(editingRow, newRow);
+                filterData();
+                showDashboard();
+            }
+        }
+
+        async function deleteTask() {
+            if (!editingRow) {
+                alert("Internal Error: No active row selected to delete.");
+                return;
+            }
+            if (!confirm("Are you sure you want to delete this record?")) return;
+
+            if (mode === 'cloud') {
+                const btn = document.getElementById('saveBtn');
+                if (btn.innerText.includes("Read Only")) {
+                    alert("Stop: File is Read-Only.");
+                    return;
+                }
+
+                if (typeof editingRow._rowIndex === 'undefined') {
+                    alert("Error: Cannot delete row with missing index.");
+                    return;
+                }
+
+                showLoader(true);
+                try {
+                    // Optimized: Use cached ID if available
+                    let tableId = currentTableId;
+                    if (!tableId) {
+                        console.log("Debug: Fetching tables for delete (cache miss)...");
+                        const tables = await callGraph(`/me/drive/items/${itemId}/workbook/tables`);
+                        if (!tables.value || tables.value.length === 0) throw new Error("No Table found.");
+                        tableId = tables.value[0].id;
+                        currentTableId = tableId;
+                    }
+
+                    console.log("Debug: Deleting row at index:", editingRow._rowIndex);
+
+                    await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/rows/itemAt(index=${editingRow._rowIndex})`, 'DELETE');
+
+                    alert("Task Deleted Successfully!");
+                    await loadCloudFile(itemId, "OneDrive File", true);
+                    showDashboard();
+                } catch (e) {
+                    console.error("Delete Error:", e);
+                    alert("Error deleting row: " + e.message);
+                }
+                showLoader(false);
+            } else {
+                const idx = rawData.indexOf(editingRow);
+                if (idx > -1) rawData.splice(idx, 1);
+                filterData();
+                showDashboard();
+            }
+        }
+
+    </script>
+</body>
+
+</html>
