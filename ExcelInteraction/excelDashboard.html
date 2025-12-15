@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel Project Dashboard</title>
@@ -13,6 +14,35 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* CRITICAL PRELOADER STYLE */
+        #app-preloader {
+            position: fixed;
+            inset: 0;
+            background: #0f172a;
+            /* Slate 900 */
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-out, visibility 0.5s;
+        }
+
+        .preloader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #6366f1;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* --- CSS VARIABLES & RESET --- */
         * {
             box-sizing: border-box;
@@ -307,7 +337,7 @@
             text-align: center;
             cursor: pointer;
             transition: var(--transition);
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
             background: var(--bg-body);
         }
 
@@ -724,47 +754,56 @@
         @media (max-width: 768px) {
             nav {
                 height: auto;
-                padding: 1rem;
+                padding: 0.8rem 1rem;
                 flex-direction: column;
-                gap: 1rem;
+                gap: 0.8rem;
             }
 
+            nav .brand {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 0.2rem;
+            }
+
+            .btn-text {
+                display: none;
+            }
+
+            .btn {
+                padding: 0.6rem;
+            }
+
+            /* Allow controls bar to scroll horizontally on mobile too */
             .controls-bar {
-                flex-direction: column;
-                align-items: stretch;
-                overflow-x: visible;
-                flex-wrap: wrap;
+                padding: 0.8rem;
+                gap: 0.6rem;
+                margin: 0 -1rem;
+                /* Edge-to-edge on mobile */
+                width: calc(100% + 2rem);
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
             }
 
-            .search-wrapper,
-            .date-filter-box,
-            #dynamic-filters,
+            .container {
+                padding: 0 1rem;
+                width: 100%;
+                margin: 1rem auto;
+            }
+
             .chart-container {
                 width: 100%;
-            }
-
-            .chart-container {
                 height: 260px;
-            }
-
-            #dynamic-filters {
-                flex-direction: column;
-            }
-
-            .date-filter-box {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-
-            .date-filter-box input {
-                width: 100%;
             }
         }
     </style>
 </head>
 
-<body>
+<body style="opacity: 0; transition: opacity 0.3s ease;">
+    <!-- PRELOADER -->
+    <div id="app-preloader">
+        <div class="preloader-spinner"></div>
+    </div>
 
     <div id="loader" class="loader-line"></div>
 
@@ -842,19 +881,20 @@
                 <span>Excel Dashboard <span class="live-text" id="status-badge"
                         style="font-weight: 400; color: #94a3b8; font-size: 0.9rem;">| Local File</span></span>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2" style="overflow-x: auto; max-width: 100%; padding-bottom: 4px;">
                 <button class="btn btn-white" onclick="toggleTheme()" title="Toggle Theme">
                     <i id="theme-icon" class="fa-solid fa-moon"></i>
                 </button>
-                <div style="height: 20px; width: 1px; background: var(--border); margin: 0 0.5rem;"></div>
-                <button class="btn btn-white" onclick="location.reload()" title="Close File">
-                    <i class="fa-solid fa-folder-open"></i> Open New
+                <div style="height: 20px; width: 1px; background: var(--border); margin: 0 0.5rem; flex-shrink: 0;">
+                </div>
+                <button class="btn btn-white" onclick="location.reload()" title="Open New File">
+                    <i class="fa-solid fa-folder-open"></i> <span class="btn-text">Open New</span>
                 </button>
-                <button class="btn btn-primary" onclick="showAddScreen()">
-                    <i class="fa-solid fa-plus"></i> Add Task
+                <button class="btn btn-primary" onclick="showAddScreen()" title="Add Task">
+                    <i class="fa-solid fa-plus"></i> <span class="btn-text">Add Task</span>
                 </button>
-                <button class="btn btn-success" onclick="saveAndDownload()" id="saveBtn">
-                    <i class="fa-solid fa-floppy-disk"></i> Save & Download
+                <button class="btn btn-success" onclick="saveAndDownload()" id="saveBtn" title="Save & Download">
+                    <i class="fa-solid fa-floppy-disk"></i> <span class="btn-text">Save & Download</span>
                 </button>
             </div>
         </nav>
@@ -884,7 +924,8 @@
                     <span style="color: var(--danger);">Overdue Only</span>
                 </label>
 
-                <button class="btn btn-white" onclick="resetFilters()">Reset Filters</button>
+                <button class="btn btn-white" onclick="resetFilters()" title="Reset Filters"><i
+                        class="fa-solid fa-filter-circle-xmark"></i> <span class="btn-text">Reset</span></button>
             </div>
             <div class="grid-stats">
                 <div class="card">
@@ -1092,11 +1133,8 @@
         async function initMsal() {
             // CRITICAL: Check Protocol
             if (window.location.protocol === 'file:') {
-                const correctUrl = "http://localhost:8000/excelDashboard.html";
-                alert("SECURITY BLOCK: Microsoft Login does not work with 'file://' addresses.\n\n" +
-                    "Please close this tab and open the Dashboard using this URL instead:\n\n" +
-                    correctUrl + "\n\n(You must use the Local Server we started)");
-                throw new Error("Wrong Protocol (file://). Use http://localhost:8000 instead.");
+                console.warn("Microsoft Login (MSAL) unavailable on file:// protocol. Local file mode works fine.");
+                return null;
             }
 
             const clientId = document.getElementById('clientIdInput').value.trim();
@@ -1130,7 +1168,15 @@
                 localStorage.setItem('azure_client_id', clientId);
 
                 const msalApp = await initMsal();
-                if (!msalApp) throw new Error("Failed to initialize MSAL. Client ID might be missing or invalid.");
+                if (!msalApp) {
+                    if (window.location.protocol === 'file:') {
+                        alert("Note: OneDrive Cloud features require a web server.\n\n" +
+                            "To use the Cloud tab, please run the 'run_dashboard.bat' script included in the folder.\n" +
+                            "For now, you can continue using the 'Local File' tab perfectly fine!");
+                        return;
+                    }
+                    throw new Error("Failed to initialize MSAL. Client ID might be missing or invalid.");
+                }
 
                 console.log("MSAL Initialized");
 
@@ -2366,6 +2412,18 @@
             }
         }
 
+    </script>
+    <script>
+        // --- REMOVE PRELOADER ON LOAD ---
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('app-preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                preloader.style.visibility = 'hidden';
+                setTimeout(() => { preloader.remove(); }, 500);
+            }
+            document.body.style.opacity = '1';
+        });
     </script>
 </body>
 
