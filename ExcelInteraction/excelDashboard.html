@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
 
@@ -1064,10 +1064,15 @@
             }
 
             // Init Theme
-            const savedTheme = localStorage.getItem('theme') || 'light';
+            let savedTheme = 'dark'; // Default to Dark for premium feel & match preloader
+            try {
+                const stored = localStorage.getItem('theme');
+                if (stored) savedTheme = stored;
+            } catch (e) { console.warn("LocalStorage access denied:", e); }
+
             setTheme(savedTheme);
 
-            // Drag and drop
+            // Drag and drop setup ...
             const dropArea = document.getElementById('dropArea');
             if (dropArea) {
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -1082,12 +1087,13 @@
                 dropArea.addEventListener('drop', handleDrop, false);
             }
 
-            const storedCid = localStorage.getItem('azure_client_id');
-            if (storedCid) {
-                document.getElementById('clientIdInput').value = storedCid;
-                // Attempt Auto-Login
-                tryAutoLogin(storedCid);
-            }
+            try {
+                const storedCid = localStorage.getItem('azure_client_id');
+                if (storedCid) {
+                    document.getElementById('clientIdInput').value = storedCid;
+                    tryAutoLogin(storedCid);
+                }
+            } catch (e) { console.log("No saved client ID or storage restricted."); }
         };
 
         async function tryAutoLogin(clientId) {
@@ -1581,7 +1587,7 @@
 
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
+            try { localStorage.setItem('theme', theme); } catch (e) { }
             const icon = document.getElementById('theme-icon');
             if (icon) icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
             if (rawData.length > 0) filterData();
