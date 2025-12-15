@@ -650,7 +650,14 @@
             </p>
 
             <input type="text" id="apiUrlInput" class="form-input" placeholder="https://script.google.com/macros/s/..."
-                style="padding-left: 1rem; margin-bottom: 1.5rem;">
+                style="padding-left: 1rem; margin-bottom: 0.5rem;">
+
+            <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 1.5rem;">
+                <a href="#" onclick="testUrl()"
+                    style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">
+                    <i class="fa-solid fa-up-right-from-square"></i> Test URL in New Tab
+                </a>
+            </div>
 
             <button class="btn btn-primary" onclick="connectToSheet()"
                 style="width: 100%; justify-content: center; padding: 0.8rem;">
@@ -888,6 +895,19 @@
             }
         }
 
+        function testUrl() {
+            const input = document.getElementById('apiUrlInput').value.trim();
+            if (!input) { alert("Please enter the URL first."); return; }
+            // Append action=read just in case, though usually plain GET works for testing
+            const separator = input.includes('?') ? '&' : '?';
+            const url = `${input}${separator}action=read`;
+
+            // Open in new tab
+            window.open(url, '_blank');
+
+            alert("Explanation:\n- If the new tab shows JSON data (e.g., [{\"APP\":...}]), the URL is CORRECT.\n- If it asks you to LOGIN to Google, the script permissions are WRONG (change to 'Anyone').\n- If it shows 'Script not found', the URL is WRONG.");
+        }
+
         function showApp() {
             document.getElementById('connect-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
@@ -897,28 +917,37 @@
         async function fetchData() {
             showLoader(true);
             try {
+                // We use GET for reading. 
+                // If this fails with a CORS error, it is 99% likely that the Script is NOT deployed as "Anyone".
+                // When not "Anyone", Google redirects to a Login page which DOES NOT support CORS, causing "Failed to fetch".
                 const separator = API_URL.includes('?') ? '&' : '?';
-                const res = await fetch(`${API_URL}${separator}t=${Date.now()}`);
+                const url = `${API_URL}${separator}action=read&t=${Date.now()}`;
+
+                const res = await fetch(url, {
+                    method: 'GET'
+                    // No custom headers for GET to keep it a "Simple Request"
+                });
 
                 if (!res.ok) {
                     throw new Error(`HTTP Error ${res.status}`);
                 }
 
-                const json = await res.json();
+                const text = await res.text();
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    throw new Error("Invalid response. The URL might be wrong or not public.");
+                }
 
                 if (json.status === 'error') throw new Error(json.message);
 
-                // Handle successful read (Array or {status: success, data: []})
                 let data = Array.isArray(json) ? json : (json.data || []);
 
                 if (data.length > 0) {
-                    // Filter out the _rowIndex internal key from headers
                     headers = Object.keys(data[0]).filter(k => k !== '_rowIndex');
-
-                    // Reorder headers per user request
                     const desiredOrder = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
                     headers.sort((a, b) => {
-
                         const ia = desiredOrder.indexOf(a.toUpperCase());
                         const ib = desiredOrder.indexOf(b.toUpperCase());
                         if (ia !== -1 && ib !== -1) return ia - ib;
@@ -928,14 +957,10 @@
                     });
 
                     rawData = data;
-
-                    // Default Sort: Target Date Descending
                     sortCol = 'TARGET DATE';
                     sortAsc = false;
-
                     initDashboard();
                 } else {
-                    // Setup default headers if empty
                     headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
                     rawData = [];
                     initDashboard();
@@ -943,8 +968,8 @@
             } catch (e) {
                 console.error(e);
                 let msg = "Connection Error: " + e.message;
-                if (e.message.includes("Failed to fetch")) {
-                    msg += "\n\nPossible causes:\n1. The Google Apps Script is not deployed as 'Anyone'.\n2. You are using the wrong URL.\n3. CORS is blocking the request (common if opening HTML file directly).";
+                if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+                    msg += "\n\nCRITICAL FIX NEEDED:\n1. Open your Google Apps Script.\n2. Click 'Deploy' -> 'New Deployment'.\n3. Set 'Who has access' to 'ANYONE'. (This is the #1 cause)\n4. Copy the NEW URL and use it below.\n\nTip: Click the 'Test URL' button to check for permission errors.";
                 }
                 alert(msg);
             }
@@ -958,8 +983,10 @@
                 const finalPayload = { ...payload, action: action };
 
                 // Attempt Basic POST
+                // We use Content-Type: text/plain to avoid CORS preflight (OPTIONS) which GAS doesn't handle.
                 const res = await fetch(API_URL, {
                     method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify(finalPayload)
                 });
 
@@ -968,19 +995,22 @@
                 }
 
                 const text = await res.text();
-                // If response is empty or just text, that's fine for now, but usually it's JSON
+
                 try {
                     const json = JSON.parse(text);
                     if (json.status === 'error') throw new Error(json.message);
                 } catch (e) {
-                    // unexpected response format, but if it returned 200, we might assume success or just log it
+                    // unexpected response format
                     console.warn("Non-JSON response:", text);
+                    if (text.includes("<!DOCTYPE html>") || text.includes("<html")) {
+                        throw new Error("The server returned HTML instead of JSON. This often happens if:\n1. The script is not deployed as 'Anyone'.\n2. The script crashed.\n3. You need to create a 'New Deployment' in Apps Script.");
+                    }
                 }
 
             } catch (e) {
                 console.error("Sync Error:", e);
                 // The 'Failed to fetch' with 200 OK often means CORS issues hidden by the browser or Script Crash
-                alert("Update failed. Reason: " + e.message + "\n\nRefer to the Console (F12) for details.");
+                alert("Update failed. Reason: " + e.message + "\n\nRefer to the Console (F12) for details.\n\nREMINDER: Ensure your Google Apps Script is deployed as 'Web App' -> 'Who has access: Anyone'.");
             }
             showLoader(false);
         }

@@ -11,28 +11,40 @@ function doPost(e) { return handleRequest(e); }
 
 function handleRequest(e) {
   const lock = LockService.getScriptLock();
-  lock.tryLock(10000); 
+  // Wait for up to 10 seconds for other processes to finish.
+  lock.tryLock(10000);
 
   try {
     // ----------------------------------------------------
-    // 1. SMART ACTION DETECTION (The Fix)
+    // 1. SMART ACTION DETECTION
     // ----------------------------------------------------
-    let action = e.parameter.action; // Check URL first (?action=read)
+    // Context: When using "Content-Type: text/plain" to bypass CORS, 
+    // the data is in e.postData.contents. Param parsing might differ.
+    
+    let action = e.parameter ? e.parameter.action : null; 
     let payload = {};
 
-    // If not in URL, check the Body (JSON)
+    // Attempt to parse existing body
     if (e.postData && e.postData.contents) {
       try {
-        payload = JSON.parse(e.postData.contents);
-        if (!action) action = payload.action; 
-      } catch (err) {}
+        const rawContent = e.postData.contents;
+        payload = JSON.parse(rawContent);
+        // If action wasn't in URL, check body
+        if (!action && payload.action) {
+          action = payload.action;
+        }
+      } catch (err) {
+        // Body was not JSON (maybe just empty or standard form data), ignore.
+      }
     }
 
-    // IF STILL UNKNOWN, DEFAULT TO "READ" (Prevents the error)
+    // Default to "read" if no action specified
     if (!action) {
-      // If we have no action but we have a sheet, let's just return data to be helpful
       action = "read";
     }
+    
+    // Normalize action
+    action = action.toLowerCase();
     // ----------------------------------------------------
 
     const doc = SpreadsheetApp.openById(SHEET_ID);
@@ -40,6 +52,7 @@ function handleRequest(e) {
     
     if (!sheet) {
       sheet = doc.insertSheet(SHEET_NAME);
+      // Initialize headers if new sheet
       sheet.appendRow(["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"]);
     }
 
@@ -70,11 +83,17 @@ function handleRequest(e) {
 
     // --- UPDATE ---
     if (action == "update") {
+      // Expecting _rowIndex in payload
+      if (payload._rowIndex === undefined) {
+         return response({status: "error", message: "Missing _rowIndex for update"});
+      }
+      
       const rowIndex = parseInt(payload._rowIndex);
-      const sheetRow = rowIndex + 2; 
+      const sheetRow = rowIndex + 2; // +1 for header, +1 for 0-index
       const headers = sheet.getDataRange().getValues()[0];
       
       headers.forEach((h, colIndex) => {
+        // Update only fields present in payload, exclude internal keys
         if (payload[h] !== undefined && h !== "_rowIndex" && h !== "action") {
           sheet.getRange(sheetRow, colIndex + 1).setValue(payload[h]);
         }
@@ -84,6 +103,9 @@ function handleRequest(e) {
 
     // --- DELETE ---
     if (action == "delete") {
+      if (payload._rowIndex === undefined) {
+         return response({status: "error", message: "Missing _rowIndex for delete"});
+      }
       const rowIndex = parseInt(payload._rowIndex);
       const sheetRow = rowIndex + 2;
       sheet.deleteRow(sheetRow);
@@ -93,7 +115,7 @@ function handleRequest(e) {
     return response({status: "error", message: "Action not recognized: " + action});
 
   } catch (err) {
-    return response({status: "error", message: err.toString()});
+    return response({status: "error", message: "Script Error: " + err.toString()});
   } finally {
     lock.releaseLock();
   }
