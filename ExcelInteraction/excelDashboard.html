@@ -2470,27 +2470,64 @@
         }
 
         function saveFilterState() {
-            const fApp = document.getElementById('filterApp');
-            const fProject = document.getElementById('filterProject');
-            const fOwner = document.getElementById('filterOwner');
-            const fStatus = document.getElementById('filterStatus');
-            const fSort = document.getElementById('sortSelect');
-            return {
-                app: fApp ? fApp.value : '',
-                project: fProject ? fProject.value : '',
-                owner: fOwner ? fOwner.value : '',
-                status: fStatus ? fStatus.value : '',
-                sort: fSort ? fSort.value : ''
-            };
+            const state = {};
+            // 1. Dynamic Dropdowns
+            const filters = document.querySelectorAll('#dynamic-filters select');
+            filters.forEach(sel => {
+                const col = sel.getAttribute('data-col');
+                if (col) state[col] = sel.value;
+            });
+
+            // 2. Global Controls
+            state.search = document.getElementById('searchInput').value;
+            state.dateStart = document.getElementById('dateStart').value;
+            state.dateEnd = document.getElementById('dateEnd').value;
+            state.overdue = document.getElementById('overdueFilter').checked;
+
+            // 3. Sort
+            // (Sort state is global variables sortCol/sortAsc, we can persist them too if we want, 
+            // but the sort variables are already globals and might survive if not reset. 
+            // actually loadCloudFile resets 'headers' but maybe not sortCol if we are careful.
+            // initDashboard lines 1987 checks if (!sortCol). So persistence of global variable is enough if not overwritten.
+            // However, let's include them in returned state just in case we need to enforce.)
+            state.sortCol = sortCol;
+            state.sortAsc = sortAsc;
+
+            return state;
         }
 
         function restoreFilterState(state) {
             if (!state) return;
-            if (state.app) document.getElementById('filterApp').value = state.app;
-            if (state.project) document.getElementById('filterProject').value = state.project;
-            if (state.owner) document.getElementById('filterOwner').value = state.owner;
-            if (state.status) document.getElementById('filterStatus').value = state.status;
-            if (state.sort) document.getElementById('sortSelect').value = state.sort;
+
+            // 1. Dynamic Dropdowns
+            const filters = document.querySelectorAll('#dynamic-filters select');
+            filters.forEach(sel => {
+                const col = sel.getAttribute('data-col');
+                if (state[col]) sel.value = state[col];
+            });
+
+            // 2. Global Controls
+            if (state.search !== undefined) document.getElementById('searchInput').value = state.search;
+            if (state.dateStart !== undefined) document.getElementById('dateStart').value = state.dateStart;
+            if (state.dateEnd !== undefined) document.getElementById('dateEnd').value = state.dateEnd;
+            if (state.overdue !== undefined) document.getElementById('overdueFilter').checked = state.overdue;
+
+            // 3. Sort
+            if (state.sortCol) {
+                sortCol = state.sortCol;
+                sortAsc = state.sortAsc;
+                // Update header icons
+                const ths = document.querySelectorAll('#mainTable th');
+                ths.forEach(th => {
+                    if (th.innerText.includes(sortCol)) {
+                        // This is a bit tricky because innerText includes the icon. 
+                        // But renderTable rebuilds them. 
+                        // Actually filterData calls renderTable which rebuilds headers using current sortCol.
+                        // So just setting the global variables is enough before calling filterData.
+                    }
+                });
+            }
+
             filterData(); // Re-apply
         }
 
@@ -2686,7 +2723,7 @@
                     console.log("Debug: POST Success:", postRes);
 
                     alert("Task Added Successfully!");
-                    await loadCloudFile(itemId, "OneDrive File");
+                    await loadCloudFile(itemId, "OneDrive File", true);
                     showDashboard();
 
                 } else {
@@ -2751,7 +2788,7 @@
                     });
 
                     alert("Task updated successfully!");
-                    await loadCloudFile(itemId, "OneDrive File");
+                    await loadCloudFile(itemId, "OneDrive File", true);
                     showDashboard();
                 } catch (e) { alert("Sync Error: " + e.message); }
                 showLoader(false);
