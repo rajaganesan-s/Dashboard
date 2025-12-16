@@ -1094,7 +1094,24 @@
                 </div>
 
                 <div id="file-picker-section" class="hidden">
-                    <p style="font-weight: 600; text-align: left; margin-bottom: 0.5rem;">Select an Excel File:</p>
+                    <!-- URL PASTE OPTION -->
+                    <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+                        <label
+                            style="display:block; text-align:left; font-weight:600; margin-bottom:0.5rem; color:var(--text-main);">Option
+                            1: Paste File Link</label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input type="text" id="fileUrlInput" class="form-input"
+                                placeholder="Paste 'Copy Link' URL here..." style="background:var(--bg-body);">
+                            <button class="btn btn-primary" onclick="loadFromLink()">Load</button>
+                        </div>
+                        <small
+                            style="display:block; text-align:left; color:var(--text-light); margin-top:0.4rem; font-size:0.8rem;">
+                            Supports OneDrive/SharePoint "Copy Link" URLs.
+                        </small>
+                    </div>
+
+                    <p style="font-weight: 600; text-align: left; margin-bottom: 0.5rem; color:var(--text-main);">Option
+                        2: Browse Files</p>
                     <div id="onedrive-list" class="file-list">
                         <div style="padding: 1rem; color: #94a3b8;">Loading files...</div>
                     </div>
@@ -1600,6 +1617,41 @@
                 renderFileList(items);
             } catch (e) {
                 listContainer.innerHTML = `<div style="padding:1rem;color:red">Error: ${e.message}</div>`;
+            }
+        }
+
+        async function loadFromLink() {
+            const url = document.getElementById('fileUrlInput').value.trim();
+            if (!url) {
+                alert("Please paste a link first.");
+                return;
+            }
+
+            showLoader(true);
+            try {
+                // MS Graph Logic: Convert Sharing URL to Encoded ID
+                // 1. Base64 Encode
+                let string = btoa(url);
+                // 2. Replace chars
+                string = string.replace(/\//g, '_').replace(/\+/g, '-');
+                // 3. Remove trailing =
+                while (string.endsWith('=')) string = string.slice(0, -1);
+                // 4. Prefix
+                const encodedUrl = "u!" + string;
+
+                console.log("Resolving Link:", encodedUrl);
+
+                const item = await callGraph(`/shares/${encodedUrl}/driveItem`);
+                if (item && item.id) {
+                    // Success
+                    await loadCloudFile(item.id, item.name);
+                } else {
+                    throw new Error("Could not resolve file info from this link.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Failed to load link.\n\nEnsure this is a valid OneDrive/SharePoint 'Copy Link' URL and you are signed in with the correct account.\n\nError: " + e.message);
+                showLoader(false);
             }
         }
 
