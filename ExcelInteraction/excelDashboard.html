@@ -1044,24 +1044,9 @@
 
         // --- INITIALIZATION ---
         window.onload = async function () {
-            // 1. Protocol Handling (Redirect file:// to localhost)
-            if (window.location.protocol === 'file:') {
-                document.body.innerHTML = `
-                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#f3f4f6;">
-                        <h2 style="color:#1f2937">Initializing Dashboard...</h2>
-                        <p style="color:#6b7280;margin-bottom:20px">Redirecting to Local Server for OneDrive Access.</p>
-                        <a href="http://localhost:8000/excelDashboard.html" 
-                           style="padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:8px;font-weight:600;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
-                           Click Here to Launch
-                        </a>
-                    </div>
-                `;
-                // Allow user to see message briefly then redirect
-                setTimeout(() => {
-                    window.location.href = "http://localhost:8000/excelDashboard.html";
-                }, 1500);
-                return;
-            }
+            // 1. Protocol Handling (Redirect file:// to localhost) - DISABLED
+            // if (window.location.protocol === 'file:') { ... }
+
 
             // Init Theme
             let savedTheme = 'dark'; // Default to Dark for premium feel & match preloader
@@ -1087,13 +1072,62 @@
                 dropArea.addEventListener('drop', handleDrop, false);
             }
 
-            try {
-                const storedCid = localStorage.getItem('azure_client_id');
-                if (storedCid) {
-                    document.getElementById('clientIdInput').value = storedCid;
-                    tryAutoLogin(storedCid);
+            // FILE PROTOCOL CHECK (Disable Cloud Features)
+            if (window.location.protocol === 'file:') {
+                // 1. Mark Tab as Restricted
+                const cloudTab = document.getElementById('tab-cloud');
+                if (cloudTab) {
+                    cloudTab.innerHTML += ' <i class="fa-solid fa-ban" style="font-size:0.8em; opacity:0.6; margin-left:4px;"></i>';
+                    cloudTab.title = "Cloud features require a Local Web Server.";
                 }
-            } catch (e) { console.log("No saved client ID or storage restricted."); }
+
+                // 2. Replace Auth Section with Info Message
+                const authSection = document.getElementById('auth-section');
+                if (authSection) {
+                    authSection.innerHTML = `
+                        <div style="padding:1rem; border:1px solid var(--warning); background:var(--warning-bg); color:var(--text-main); border-radius:var(--radius-md); margin-bottom:1rem; text-align:center;">
+                            <div style="font-weight:600; margin-bottom:0.5rem; color:var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i> Server Required</div>
+                            <p style="font-size:0.9rem; margin:0; opacity:0.9;">
+                                OneDrive Cloud access requires a web server (http://localhost).
+                                <br><br>
+                                Please use the <b>Local File</b> tab for direct file access.
+                            </p>
+                        </div>
+                        <button class="btn btn-white" disabled style="opacity:0.5; cursor:not-allowed; width:100%;">
+                            Cloud Sign-In Unavailable
+                        </button>
+                    `;
+                }
+            } else {
+                // ONLY Attempt Auto-Login if NOT on file protocol
+                try {
+                    const storedCid = localStorage.getItem('azure_client_id');
+                    if (storedCid) {
+                        document.getElementById('clientIdInput').value = storedCid;
+                        tryAutoLogin(storedCid);
+                    }
+                } catch (e) { console.log("No saved client ID or storage restricted."); }
+
+                // Display Redirect URI Helper
+                const redirectUri = window.location.origin + window.location.pathname;
+                const authSection = document.getElementById('auth-section');
+                if (authSection) {
+                    const uriDisplay = document.createElement('div');
+                    uriDisplay.style.marginTop = '1rem';
+                    uriDisplay.style.padding = '0.75rem';
+                    uriDisplay.style.background = 'var(--bg-body)';
+                    uriDisplay.style.borderRadius = 'var(--radius-md)';
+                    uriDisplay.style.border = '1px dashed var(--border)';
+                    uriDisplay.style.fontSize = '0.8rem';
+                    uriDisplay.style.textAlign = 'left';
+                    uriDisplay.innerHTML = `
+                        <div style="color:var(--text-light); margin-bottom:4px;">Redirect URI (Add to Azure):</div>
+                        <code style="display:block; word-break:break-all; color:var(--primary); font-family:monospace;">${redirectUri}</code>
+                    `;
+                    // Insert before the button (which is the last child usually, but let's append to auth-section)
+                    authSection.appendChild(uriDisplay);
+                }
+            }
         };
 
         async function tryAutoLogin(clientId) {
