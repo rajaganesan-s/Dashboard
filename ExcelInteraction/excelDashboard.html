@@ -1984,8 +1984,11 @@
 
                 showApp();
                 initDashboard();
-                if (keepFilters && savedFilters) restoreFilterState(savedFilters);
 
+                // RESTORE FILTERS: Must happen after initDashboard() builds the dropdowns
+                if (keepFilters && savedFilters) {
+                    restoreFilterState(savedFilters);
+                }
             } catch (e) {
                 alert("Critical Load Error: " + e.message);
                 console.error(e);
@@ -2808,8 +2811,19 @@
                         }
                     });
 
-                    // Trigger update logic to set label correctly
-                    handleMultiSelectChange(allCb);
+                    // Update "Select All" Checkbox Status
+                    const allChecked = Array.from(boxes).every(cb => cb.checked);
+                    allCb.checked = allChecked;
+
+                    // Update UI Label
+                    const container = con;
+                    const colName = container.getAttribute('data-col');
+                    const triggerLabel = container.querySelector('.label');
+
+                    const checkedCount = foundCount;
+                    if (checkedCount === boxes.length) triggerLabel.innerText = colName;
+                    else if (checkedCount === 0) triggerLabel.innerText = `${colName} (0)`;
+                    else triggerLabel.innerText = `${colName} (${checkedCount})`;
 
                     // Edge Case: If restored value not found (e.g. DELETED), count mismatch is fine, strict restore.
                 }
@@ -3088,7 +3102,9 @@
                     };
 
                     const rowArray = tableColumns.map(colName => {
-                        const stdKey = Object.keys(map).find(k => map[k].includes(colName) || k === colName);
+                        const stdKey = Object.keys(map).find(k =>
+                            map[k].some(alias => colName.includes(alias)) || k === colName
+                        );
                         return stdKey ? (newRow[stdKey] || "") : "";
                     });
 
