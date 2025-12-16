@@ -2149,14 +2149,14 @@
                     const btn = document.querySelector('button[onclick="refreshDashboard()"]');
                     const icon = btn ? btn.querySelector('i') : null;
                     if (icon) icon.classList.add('fa-spin');
-                    
+
                     showLoader(true);
-                    
+
                     try {
                         // Attempt to fetch file (cache busting)
                         const response = await fetch(currentFileName + '?t=' + Date.now());
                         if (!response.ok) throw new Error("Fetch failed");
-                        
+
                         const arrayBuffer = await response.arrayBuffer();
                         const data = new Uint8Array(arrayBuffer);
                         const workbook = XLSX.read(data, { type: 'array' });
@@ -2939,7 +2939,7 @@
                 const id = `${prefix}-${sanitize(h)}`;
 
                 if (hUpper === 'STATUS') {
-                    const statusOptions = ["YET TO START", "DEV IN-PROGRESS", "DEV COMPLETED", "QA TEST", "ALPHA TEST", "BETA TEST", "READY FOR PRODUCTION", "GO-LIVE (COMPLETED)", "HOLD"];
+                    const statusOptions = ["YET TO START", "DEV IN-PROGRESS", "DEV COMPLETED", "QA TEST", "ALPHA TEST", "BETA TEST", "READY FOR PRODUCTION", "GO-LIVE (COMPLETED)", "ON HOLD"];
                     let opts = statusOptions.map(opt => `<option value="${opt}" ${String(val).toUpperCase() === opt ? 'selected' : ''}>${opt}</option>`).join('');
                     if (val && !statusOptions.includes(String(val).toUpperCase())) opts += `<option value="${val}" selected>${val}</option>`;
                     inputHtml = `<select class="form-input-field" id="${id}">${opts}</select>`;
