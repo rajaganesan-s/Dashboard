@@ -1069,6 +1069,9 @@
                 <button class="btn btn-white" onclick="location.reload()" title="Open New File">
                     <i class="fa-solid fa-folder-open"></i> <span class="btn-text">Open New</span>
                 </button>
+                <button class="btn btn-white" onclick="refreshDashboard()" title="Refresh Data from Cloud">
+                    <i class="fa-solid fa-rotate"></i> <span class="btn-text">Refresh</span>
+                </button>
                 <button class="btn btn-primary" onclick="showAddScreen()" title="Add Task">
                     <i class="fa-solid fa-plus"></i> <span class="btn-text">Add Task</span>
                 </button>
@@ -1211,6 +1214,7 @@
         let driveId = null;
         let itemId = null;
         let currentTableId = null;
+        let currentFileName = "";
 
         // View State
         let sortCol = null;
@@ -1598,6 +1602,7 @@
             if (keepFilters) savedFilters = saveFilterState();
             showLoader(true);
             itemId = id;
+            currentFileName = name;
             console.log("Loading file:", name, id);
 
             try {
@@ -1776,6 +1781,7 @@
                         else headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
 
                         mode = 'local';
+                        currentFileName = file.name;
                         document.getElementById('status-badge').innerText = `| Local: ${file.name}`;
                         document.getElementById('saveBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save & Download';
                         document.getElementById('saveBtn').className = 'btn btn-success';
@@ -1842,6 +1848,28 @@
         }
 
         // --- CORE LOGIC ---
+        async function refreshDashboard() {
+            if (mode === 'cloud' && itemId) {
+                // Add spin animation to icon
+                const btn = document.querySelector('button[onclick="refreshDashboard()"]');
+                const icon = btn ? btn.querySelector('i') : null;
+                if (icon) icon.classList.add('fa-spin');
+
+                try {
+                    await loadCloudFile(itemId, currentFileName, true);
+                    // Optional: Toast "Refreshed"
+                } catch (e) {
+                    console.error("Refresh failed:", e);
+                } finally {
+                    if (icon) icon.classList.remove('fa-spin');
+                }
+            } else if (mode === 'local') {
+                alert("For local files, changes made outside this dashboard will not appear until you re-open the file (Browser Security Restriction).");
+            } else {
+                alert("Please open a file first.");
+            }
+        }
+
         function initDashboard() {
             if (!sortCol) sortCol = headers.find(h => h.toUpperCase() === 'TARGET DATE') || headers[0];
             buildFilters();
