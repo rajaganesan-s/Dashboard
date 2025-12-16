@@ -1535,8 +1535,10 @@
             // 1. Protocol Handling (Redirect file:// to localhost) - DISABLED
             // if (window.location.protocol === 'file:') { ... }
 
+            // 1. Apply Dynamic Color first
+            applyRandomTheme();
 
-            // Init Theme
+            // 2. Init Theme
             let savedTheme = 'dark'; // Default to Dark for premium feel & match preloader
             try {
                 const stored = localStorage.getItem('theme');
@@ -2434,7 +2436,7 @@
                 const allCb = menu.querySelector('input[value="All"]');
                 if (!allCb.checked) {
                     const checkedValues = Array.from(menu.querySelectorAll('input[type="checkbox"]:not([value="All"]):checked')).map(cb => cb.value);
-                    activeFilters[col] = checkedValues;
+                    if (checkedValues.length > 0) activeFilters[col] = checkedValues;
                 }
             });
 
@@ -2519,9 +2521,53 @@
             updateStats(filteredData);
             updateCharts(filteredData);
             renderTable(filteredData);
+            renderTable(filteredData);
         }
 
-        // --- RENDERING ---
+        // --- DYNAMIC THEME ENGINE ---
+        const colorThemes = [
+            '#0ea5e9', // Sky Blue
+            '#f43f5e', // Rose
+            '#8b5cf6', // Violet
+            '#10b981', // Emerald
+            '#f59e0b', // Amber
+            '#ec4899', // Pink
+            '#14b8a6', // Teal
+            '#6366f1', // Indigo
+            '#f97316', // Orange
+            '#06b6d4'  // Cyan
+        ];
+
+        let currentThemeColor = colorThemes[0];
+
+        function applyRandomTheme() {
+            const idx = Math.floor(Math.random() * colorThemes.length);
+            currentThemeColor = colorThemes[idx];
+            console.log("Applying Theme:", currentThemeColor);
+
+            const root = document.documentElement;
+            root.style.setProperty('--primary', currentThemeColor);
+
+            // Generate hover (slightly darker)
+            // Simple hex manipulation or just use same for now with opacity
+            root.style.setProperty('--primary-hover', adjustBrightness(currentThemeColor, -15));
+        }
+
+        function adjustBrightness(col, amt) {
+            let usePound = false;
+            if (col[0] == "#") {
+                col = col.slice(1);
+                usePound = true;
+            }
+            let num = parseInt(col, 16);
+            let r = (num >> 16) + amt;
+            if (r > 255) r = 255; else if (r < 0) r = 0;
+            let b = ((num >> 8) & 0x00FF) + amt;
+            if (b > 255) b = 255; else if (b < 0) b = 0;
+            let g = (num & 0x0000FF) + amt;
+            if (g > 255) g = 255; else if (g < 0) g = 0;
+            return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16);
+        }
         function renderTable(data) {
             const total = data.length;
             const totalPages = Math.ceil(total / rowsPerPage);
@@ -2714,7 +2760,9 @@
                 slate: isDark ? '#94a3b8cc' : '#64748bcc',
                 goLiveGreen: isDark ? '#22c55e' : '#16a34a', // Lighter Green for Go-Live
                 white: '#ffffff',
-                bg: isDark ? '#1e293b' : '#ffffff'
+                bg: isDark ? '#1e293b' : '#ffffff',
+                primary: currentThemeColor, // Use Dynamic Color
+                primaryTransparent: currentThemeColor + '20' // 20 hex = approx 12% opacity
             };
 
             const getColorForStatus = (status) => {
@@ -2788,8 +2836,8 @@
             if (charts.apps) charts.apps.destroy();
             const ctxA = document.getElementById('chartApps').getContext('2d');
             let gradA = ctxA.createLinearGradient(0, 0, 0, 300);
-            gradA.addColorStop(0, palette.violet);
-            gradA.addColorStop(1, isDark ? 'rgba(167, 139, 250, 0.1)' : 'rgba(124, 58, 237, 0.1)');
+            gradA.addColorStop(0, palette.primary); // Use Dynamic
+            gradA.addColorStop(1, isDark ? palette.primaryTransparent : palette.primaryTransparent); // Hex opacity 10
 
             charts.apps = new Chart(ctxA, {
                 type: 'bar',
@@ -2799,9 +2847,9 @@
                         label: 'Tasks',
                         data: Object.values(aCounts),
                         backgroundColor: gradA,
-                        borderColor: palette.violet,
-                        borderWidth: 1,
-                        borderRadius: 6
+                        hoverBackgroundColor: palette.primary,
+                        borderRadius: 6,
+                        barPercentage: 0.6
                     }]
                 },
                 options: {
@@ -2824,8 +2872,8 @@
             if (charts.owner) charts.owner.destroy();
             const ctxO = document.getElementById('chartOwner').getContext('2d');
             let gradO = ctxO.createLinearGradient(0, 0, 0, 300);
-            gradO.addColorStop(0, isDark ? 'rgba(52, 211, 153, 0.3)' : 'rgba(16, 185, 129, 0.2)');
-            gradO.addColorStop(1, isDark ? 'rgba(52, 211, 153, 0.0)' : 'rgba(16, 185, 129, 0.0)');
+            gradO.addColorStop(0, palette.primary);
+            gradO.addColorStop(1, isDark ? palette.primaryTransparent : palette.primaryTransparent);
 
             charts.owner = new Chart(ctxO, {
                 type: 'line',
