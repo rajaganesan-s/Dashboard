@@ -974,6 +974,65 @@
                 flex-wrap: wrap;
             }
         }
+
+        .rich-editor-container {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-body);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .rich-editor-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .editor-toolbar {
+            display: flex;
+            gap: 5px;
+            padding: 8px;
+            background: var(--divider);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .editor-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .editor-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--text-main);
+        }
+
+        :root[data-theme="dark"] .editor-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .editor-content {
+            padding: 12px;
+            min-height: 120px;
+            outline: none;
+            color: var(--text-main);
+            font-family: inherit;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .editor-content ul,
+        .editor-content ol {
+            margin: 0;
+            padding-left: 20px;
+        }
     </style>
 </head>
 
@@ -2052,6 +2111,11 @@
                             else if (vLower.includes('dev')) badgeClass = 'badge-info';
                             else if (vLower.includes('progress')) badgeClass = 'badge-warning';
                             td.innerHTML = `<span class="badge ${badgeClass}">${val}</span>`;
+                        } else if (['DELIVERABLES', 'REMARKS'].includes(key.toUpperCase())) {
+                            // Render HTML Content with overflow protection
+                            td.innerHTML = String(val); // Allow HTML
+                            td.style.whiteSpace = "normal"; // Wrap text
+                            td.style.maxWidth = "400px";
                         } else {
                             td.innerText = val;
                         }
@@ -2429,7 +2493,26 @@
                     inputHtml = `<select class="form-input-field" id="${id}">${opts}</select>`;
                 }
                 else if (['DELIVERABLES', 'REMARKS'].includes(hUpper)) {
-                    inputHtml = `<textarea class="form-input-field" id="${id}" rows="4">${val}</textarea>`;
+                    // Rich Text Editor HTML
+                    inputHtml = `
+                    <div class="rich-editor-container">
+                        <div class="editor-toolbar">
+                            <button type="button" class="editor-btn" onmousedown="formatDoc('bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                            <button type="button" class="editor-btn" onmousedown="formatDoc('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                            <button type="button" class="editor-btn" onmousedown="formatDoc('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                            <button type="button" class="editor-btn" onmousedown="formatDoc('insertUnorderedList')" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                            <button type="button" class="editor-btn" onmousedown="formatDoc('insertOrderedList')" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
+                            <button type="button" class="editor-btn" onmousedown="formatDoc('removeFormat')" title="Clear Scaling"><i class="fa-solid fa-eraser"></i></button>
+                            <div style="width:1px; background:var(--border); margin:0 4px;"></div>
+                            <div class="editor-btn" style="position:relative; width:28px; padding:0;" title="Text Color">
+                                <i class="fa-solid fa-palette" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none;"></i>
+                                <input type="color" oninput="formatDoc('foreColor', this.value)" style="opacity:0; width:100%; height:100%; cursor:pointer; padding:0; border:none;">
+                            </div>
+                        </div>
+                        <div class="editor-content form-input-field" id="${id}" contenteditable="true" style="border:none; border-top-left-radius:0; border-top-right-radius:0;">${val}</div>
+                    </div>
+                    <small style="color:var(--text-light); opacity:0.7;">* Use toolbar or keyboard shortcuts (Ctrl+B, Ctrl+I)</small>
+                    `;
                 }
                 else if (hUpper === 'TARGET DATE') {
                     inputHtml = `<input type="date" class="form-input-field" id="${id}" value="${val}">`;
@@ -2464,9 +2547,25 @@
             const newRow = {};
             headers.forEach(h => {
                 const el = document.getElementById(`${prefix}-${sanitize(h)}`);
-                if (el) newRow[h] = el.value.trim();
+                if (el) {
+                    // Check if it's our contenteditable div or a standard input
+                    if (el.isContentEditable) {
+                        newRow[h] = el.innerHTML.trim();
+                    } else {
+                        newRow[h] = el.value.trim();
+                    }
+                }
             });
             return newRow;
+        }
+
+        // --- RICH TEXT UTIL ---
+        function formatDoc(cmd, value = null) {
+            // Prevent focus loss only for buttons (mousedown), not inputs
+            if (event && event.type === 'mousedown') {
+                event.preventDefault();
+            }
+            document.execCommand(cmd, false, value);
         }
 
         async function saveAdd() {
