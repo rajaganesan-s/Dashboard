@@ -2144,7 +2144,45 @@
                     if (icon) icon.classList.remove('fa-spin');
                 }
             } else if (mode === 'local') {
-                alert("For local files, changes made outside this dashboard will not appear until you re-open the file (Browser Security Restriction).");
+                // Try to auto-refresh if file is accessible via fetch (e.g. localhost same dir)
+                if (currentFileName) {
+                    const btn = document.querySelector('button[onclick="refreshDashboard()"]');
+                    const icon = btn ? btn.querySelector('i') : null;
+                    if (icon) icon.classList.add('fa-spin');
+                    
+                    showLoader(true);
+                    
+                    try {
+                        // Attempt to fetch file (cache busting)
+                        const response = await fetch(currentFileName + '?t=' + Date.now());
+                        if (!response.ok) throw new Error("Fetch failed");
+                        
+                        const arrayBuffer = await response.arrayBuffer();
+                        const data = new Uint8Array(arrayBuffer);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                        if (json.length >= 0) {
+                            const savedFilters = saveFilterState();
+
+                            rawData = json;
+                            if (json.length > 0) headers = Object.keys(json[0]);
+                            else headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"];
+
+                            initDashboard();
+                            restoreFilterState(savedFilters);
+                        }
+                    } catch (e) {
+                        // Fallback to original alert if fetch fails (e.g. file protocol)
+                        console.warn("Auto-refresh failed, showing alert:", e);
+                        alert("For local files, changes made outside this dashboard will not appear until you re-open the file (Browser Security Restriction).\n\nTip: If you are running this on a local server (localhost), ensure the Excel file is in the same folder as this dashboard to enable Auto-Refresh.");
+                    } finally {
+                        showLoader(false);
+                        if (icon) icon.classList.remove('fa-spin');
+                    }
+                }
             } else {
                 alert("Please open a file first.");
             }
