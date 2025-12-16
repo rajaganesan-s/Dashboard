@@ -1958,6 +1958,10 @@
                             obj[stdH] = val;
                         });
                         return obj;
+                    }).filter(row => {
+                        // Filter out empty rows (Soft Deleted or Blank)
+                        const keys = Object.keys(row).filter(k => k !== '_rowIndex');
+                        return keys.some(k => row[k] && String(row[k]).trim() !== "");
                     });
                 }
 
@@ -3195,9 +3199,29 @@
 
                     console.log("Debug: Deleting row at index:", editingRow._rowIndex);
 
-                    await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/rows/itemAt(index=${editingRow._rowIndex})`, 'DELETE');
+                    try {
+                        await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/rows/itemAt(index=${editingRow._rowIndex})`, 'DELETE');
+                        alert("Task Deleted Successfully!");
+                    } catch (e) {
+                        // Handle Conflict (e.g. Table geometry prevents row deletion)
+                        if (e.message.includes("409") || e.message.includes("Conflict")) {
+                            console.warn("Delete blocked by Excel (409). Attempting Soft Delete (Clear Row)...");
 
-                    alert("Task Deleted Successfully!");
+                            // 1. Get Column Count
+                            const columnsData = await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/columns`);
+                            const colCount = columnsData.value.length;
+
+                            // 2. Clear Row Values
+                            const emptyRow = new Array(colCount).fill("");
+                            await callGraph(`/me/drive/items/${itemId}/workbook/tables/${tableId}/rows/itemAt(index=${editingRow._rowIndex})`, 'PATCH', {
+                                values: [emptyRow]
+                            });
+
+                            alert("Record cleared. (Row kept to preserve Excel structure)");
+                        } else {
+                            throw e;
+                        }
+                    }
                     await loadCloudFile(itemId, "OneDrive File", true);
                     showDashboard();
                 } catch (e) {
