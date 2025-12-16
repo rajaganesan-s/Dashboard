@@ -670,6 +670,45 @@
             color: var(--text-light);
         }
 
+        .badge-golive {
+            background-color: #16a34a !important;
+            /* Green 600 */
+            color: #ffffff !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        :root[data-theme="dark"] .badge-golive {
+            background-color: #22c55e !important;
+            /* Green 500 */
+            color: #ffffff !important;
+            border: 1px solid #16a34a;
+        }
+
+        .badge-danger {
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+
+        .badge-cyan {
+            background: rgba(34, 211, 238, 0.15);
+            color: #06b6d4;
+        }
+
+        :root[data-theme="dark"] .badge-cyan {
+            background: rgba(34, 211, 238, 0.15);
+            color: #22d3ee;
+        }
+
+        .badge-indigo {
+            background: rgba(99, 102, 241, 0.15);
+            color: #4f46e5;
+        }
+
+        :root[data-theme="dark"] .badge-indigo {
+            background: rgba(129, 140, 248, 0.15);
+            color: #818cf8;
+        }
+
         /* Loader */
         .loader-line {
             height: 4px;
@@ -1156,6 +1195,11 @@
                 <button class="btn btn-success" onclick="saveAndDownload()" id="saveBtn" title="Save & Download">
                     <i class="fa-solid fa-floppy-disk"></i> <span class="btn-text">Save & Download</span>
                 </button>
+                <div style="height: 20px; width: 1px; background: var(--border); margin: 0 0.5rem; flex-shrink: 0;"
+                    class="nav-divider"></div>
+                <button class="btn btn-danger-ghost" onclick="appSignOut()" title="Sign Out / Disconnect">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span class="btn-text">Sign Out</span>
+                </button>
             </div>
         </nav>
 
@@ -1186,6 +1230,9 @@
 
                 <button class="btn btn-white" onclick="resetFilters()" title="Reset Filters"><i
                         class="fa-solid fa-filter-circle-xmark"></i> <span class="btn-text">Reset</span></button>
+
+                <button class="btn btn-white" onclick="exportFilteredData()" title="Export Filtered Data"><i
+                        class="fa-solid fa-file-export"></i> <span class="btn-text">Export Filtered</span></button>
             </div>
             <div class="grid-stats">
                 <div class="card">
@@ -1207,6 +1254,10 @@
                 <div class="card">
                     <div class="stat-label">Overdue Items</div>
                     <div class="stat-value" id="v-overdue" style="color: var(--danger);">0</div>
+                </div>
+                <div class="card">
+                    <div class="stat-label">On Hold</div>
+                    <div class="stat-value" id="v-hold" style="color: var(--text-light);">0</div>
                 </div>
             </div>
 
@@ -1283,7 +1334,9 @@
 
     <script>
         // --- GLOBAL STATE ---
+        // --- GLOBAL STATE ---
         let rawData = [];
+        let filteredData = []; // Store currently filtered data for export
         let headers = ["APP", "PROJECT", "DELIVERABLES", "OWNER", "TARGET DATE", "STATUS", "REMARKS"]; // Defaults
         let charts = { owner: null, status: null, apps: null, timeline: null };
         let editingRow = null;
@@ -1382,10 +1435,9 @@
                     uriDisplay.style.fontSize = '0.8rem';
                     uriDisplay.style.textAlign = 'left';
                     uriDisplay.innerHTML = `
-                        <div style="color:var(--text-light); margin-bottom:4px;">Redirect URI (Add to Azure):</div>
-                        <code style="display:block; word-break:break-all; color:var(--primary); font-family:monospace;">${redirectUri}</code>
-                    `;
-                    // Insert before the button (which is the last child usually, but let's append to auth-section)
+                    <div style="color:var(--text-light); margin-bottom:4px;">Redirect URI (Add to Azure):</div>
+                    <code style="display:block; word-break:break-all; color:var(--primary); font-family:monospace;">${redirectUri}</code>
+                `;
                     authSection.appendChild(uriDisplay);
                 }
             }
@@ -1409,7 +1461,16 @@
                         accessToken = tokenRes.accessToken;
                         document.getElementById('auth-section').classList.add('hidden');
                         document.getElementById('file-picker-section').classList.remove('hidden');
-                        listOneDriveFiles();
+
+                        // Check for saved file to auto-load
+                        const lastFileId = localStorage.getItem('last_cloud_file_id');
+                        const lastFileName = localStorage.getItem('last_cloud_file_name');
+                        if (lastFileId && lastFileName) {
+                            console.log("Auto-loading saved file:", lastFileName);
+                            loadCloudFile(lastFileId, lastFileName);
+                        } else {
+                            listOneDriveFiles();
+                        }
                     }
                 }
             } catch (e) {
@@ -1716,6 +1777,11 @@
             showLoader(true);
             itemId = id;
             currentFileName = name;
+
+            // Save state for auto-reconnect
+            localStorage.setItem('last_cloud_file_id', id);
+            localStorage.setItem('last_cloud_file_name', name);
+
             console.log("Loading file:", name, id);
 
             try {
@@ -1951,6 +2017,35 @@
             showLoader(false);
         }
 
+        function exportFilteredData() {
+            if (!filteredData || filteredData.length === 0) { alert("No filtered data to export."); return; }
+            showLoader(true);
+            try {
+                // Remove internal fields like _rowIndex before export if desired, or just export as is.
+                // Better to cleanup:
+                const cleanData = filteredData.map(row => {
+                    const { _rowIndex, ...rest } = row;
+                    return rest;
+                });
+
+                const ws = XLSX.utils.json_to_sheet(cleanData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Filtered_Tasks");
+                const d = new Date();
+                const dateStr = d.toLocaleDateString('en-GB').replace(/\//g, '-');
+                XLSX.writeFile(wb, `Filtered_Dashboard_${dateStr}.xlsx`);
+            } catch (e) { alert("Error exporting: " + e.message); }
+            showLoader(false);
+        }
+
+        function appSignOut() {
+            if (confirm("Are you sure you want to sign out and disconnect current file?")) {
+                localStorage.removeItem('last_cloud_file_id');
+                localStorage.removeItem('last_cloud_file_name');
+                signOut(); // calls sessionStorage.clear() & reload
+            }
+        }
+
         function showApp() {
             document.getElementById('connect-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
@@ -1984,7 +2079,8 @@
         }
 
         function initDashboard() {
-            if (!sortCol) sortCol = headers.find(h => h.toUpperCase() === 'TARGET DATE') || headers[0];
+            // Default to no sort column => triggers reverse natural order (Last record on top)
+            // if (!sortCol) sortCol = headers.find(h => h.toUpperCase() === 'TARGET DATE') || headers[0];
             buildFilters();
             filterData();
         }
@@ -2006,9 +2102,20 @@
                 select.setAttribute('data-col', realHeader);
                 select.onchange = filterData;
 
-                let opts = `<option value="All">${realHeader}</option>`;
-                values.forEach(v => { opts += `<option value="${v}">${v}</option>`; });
-                select.innerHTML = opts;
+                // Default Option
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = 'All';
+                defaultOpt.textContent = realHeader; // e.g. "STATUS"
+                select.appendChild(defaultOpt);
+
+                // Value Options created safely
+                values.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = v;
+                    select.appendChild(opt);
+                });
+
                 container.appendChild(select);
             });
         }
@@ -2026,7 +2133,7 @@
             const search = document.getElementById('searchInput').value.toLowerCase();
             const filters = document.querySelectorAll('#dynamic-filters select');
 
-            let filtered = rawData.filter(row => {
+            filteredData = rawData.filter(row => {
                 // 1. Dropdown Filters
                 for (let sel of filters) {
                     const col = sel.getAttribute('data-col');
@@ -2086,7 +2193,7 @@
 
             // Sort
             if (sortCol) {
-                filtered.sort((a, b) => {
+                filteredData.sort((a, b) => {
                     let valA = a[sortCol] || "";
                     let valB = b[sortCol] || "";
                     if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -2095,11 +2202,14 @@
                     if (valA > valB) return sortAsc ? 1 : -1;
                     return 0;
                 });
+            } else {
+                // Default: Show last record on top (LIFO)
+                filteredData.reverse();
             }
 
-            updateStats(filtered);
-            updateCharts(filtered);
-            renderTable(filtered);
+            updateStats(filteredData);
+            updateCharts(filteredData);
+            renderTable(filteredData);
         }
 
         // --- RENDERING ---
@@ -2161,9 +2271,15 @@
                         if (key.toUpperCase() === 'STATUS') {
                             let badgeClass = 'badge-gray';
                             const vLower = String(val).toLowerCase();
-                            if (vLower.includes('completed') || vLower.includes('go-live')) badgeClass = 'badge-success';
+
+                            if (vLower.includes('go-live') || vLower.includes('go live')) badgeClass = 'badge-golive';
+                            else if (vLower.includes('completed')) badgeClass = 'badge-success';
                             else if (vLower.includes('dev')) badgeClass = 'badge-info';
-                            else if (vLower.includes('progress')) badgeClass = 'badge-warning';
+                            else if (vLower.includes('qa') || vLower.includes('test') || vLower.includes('alpha') || vLower.includes('beta')) badgeClass = 'badge-cyan';
+                            else if (vLower.includes('ready')) badgeClass = 'badge-indigo';
+                            else if (vLower.includes('error') || vLower.includes('overdue')) badgeClass = 'badge-danger';
+                            else if (vLower.includes('progress') || vLower.includes('start')) badgeClass = 'badge-warning';
+
                             td.innerHTML = `<span class="badge ${badgeClass}">${val}</span>`;
                         } else if (['DELIVERABLES', 'REMARKS'].includes(key.toUpperCase())) {
                             // Render HTML Content with overflow protection
@@ -2213,6 +2329,7 @@
                 const done = data.filter(r => String(r[keyStatus] || '').toUpperCase().includes('COMPLETED') || String(r[keyStatus] || '').toUpperCase().includes('GO-LIVE')).length;
                 const dev = data.filter(r => String(r[keyStatus] || '').toUpperCase().includes('DEV IN-PROGRESS')).length;
                 const yet = data.filter(r => String(r[keyStatus] || '').toUpperCase().includes('YET TO START')).length;
+                const hold = data.filter(r => String(r[keyStatus] || '').toUpperCase().includes('HOLD')).length;
 
                 const keyTarget = headers.find(h => h.toUpperCase() === 'TARGET DATE');
                 let overdue = 0;
@@ -2237,6 +2354,7 @@
                 document.getElementById('v-dev').innerText = dev;
                 document.getElementById('v-yet').innerText = yet;
                 document.getElementById('v-overdue').innerText = overdue;
+                document.getElementById('v-hold').innerText = hold;
             }
         }
 
@@ -2275,18 +2393,31 @@
             // --- STYLING & CONFIG ---
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-            // Distinct Palette for Professional Look
+            // Softer Palette for Professional Look
             const palette = {
-                indigo: isDark ? '#818cf8' : '#4f46e5',
-                blue: isDark ? '#60a5fa' : '#3b82f6',
-                emerald: isDark ? '#34d399' : '#10b981',
-                amber: isDark ? '#fbbf24' : '#f59e0b',
-                rose: isDark ? '#fb7185' : '#e11d48',
-                violet: isDark ? '#a78bfa' : '#7c3aed',
-                cyan: isDark ? '#22d3ee' : '#0891b2',
-                slate: isDark ? '#94a3b8' : '#64748b',
+                indigo: isDark ? '#818cf8cc' : '#6366f1cc', // Added opacity
+                blue: isDark ? '#60a5facc' : '#3b82f6cc',
+                emerald: isDark ? '#34d399cc' : '#10b981cc',
+                amber: isDark ? '#fbbf24cc' : '#f59e0bcc',
+                rose: isDark ? '#fb7185cc' : '#f43f5ecc',
+                violet: isDark ? '#a78bfacc' : '#8b5cf6cc',
+                cyan: isDark ? '#22d3eecc' : '#06b6d4cc',
+                slate: isDark ? '#94a3b8cc' : '#64748bcc',
+                goLiveGreen: isDark ? '#22c55e' : '#16a34a', // Lighter Green for Go-Live
                 white: '#ffffff',
                 bg: isDark ? '#1e293b' : '#ffffff'
+            };
+
+            const getColorForStatus = (status) => {
+                const s = String(status).toLowerCase();
+                if (s.includes('go-live') || s.includes('go live')) return palette.goLiveGreen;
+                if (s.includes('completed')) return palette.emerald;
+                if (s.includes('dev')) return palette.blue;
+                if (s.includes('qa') || s.includes('test') || s.includes('alpha') || s.includes('beta')) return palette.cyan;
+                if (s.includes('ready')) return palette.indigo;
+                if (s.includes('start') || s.includes('progress')) return palette.amber;
+                if (s.includes('overdue') || s.includes('error')) return palette.rose;
+                return palette.slate; // Default
             };
 
             const textColor = isDark ? '#e2e8f0' : '#475569';
@@ -2321,7 +2452,7 @@
                     labels: Object.keys(sCounts),
                     datasets: [{
                         data: Object.values(sCounts),
-                        backgroundColor: [palette.emerald, palette.blue, palette.amber, palette.rose, palette.slate, palette.violet, palette.cyan, palette.indigo],
+                        backgroundColor: Object.keys(sCounts).map(s => getColorForStatus(s)),
                         borderWidth: 0,
                         hoverOffset: 6
                     }]
@@ -2498,12 +2629,26 @@
 
         function restoreFilterState(state) {
             if (!state) return;
+            console.log("Restoring Filters:", state);
 
             // 1. Dynamic Dropdowns
             const filters = document.querySelectorAll('#dynamic-filters select');
             filters.forEach(sel => {
                 const col = sel.getAttribute('data-col');
-                if (state[col]) sel.value = state[col];
+                if (state[col]) {
+                    // Start by setting value
+                    sel.value = state[col];
+                    // Verify if it stuck (if option doesn't exist, it reverts to 'All')
+                    if (sel.value !== state[col] && state[col] !== 'All') {
+                        console.warn(`Filter value '${state[col]}' for '${col}' not found in new data. Adding temporary option.`);
+                        // Optional: Add the missing option so the filter is visible even if no data matches
+                        const opt = document.createElement('option');
+                        opt.value = state[col];
+                        opt.textContent = state[col] + " (0)";
+                        sel.appendChild(opt);
+                        sel.value = state[col];
+                    }
+                }
             });
 
             // 2. Global Controls
@@ -2578,7 +2723,7 @@
                 const id = `${prefix}-${sanitize(h)}`;
 
                 if (hUpper === 'STATUS') {
-                    const statusOptions = ["YET TO START", "DEV IN-PROGRESS", "DEV COMPLETED", "QA TEST", "ALPHA TEST", "BETA TEST", "READY FOR PRODUCTION", "GO-LIVE (COMPLETED)"];
+                    const statusOptions = ["YET TO START", "DEV IN-PROGRESS", "DEV COMPLETED", "QA TEST", "ALPHA TEST", "BETA TEST", "READY FOR PRODUCTION", "GO-LIVE (COMPLETED)", "HOLD"];
                     let opts = statusOptions.map(opt => `<option value="${opt}" ${String(val).toUpperCase() === opt ? 'selected' : ''}>${opt}</option>`).join('');
                     if (val && !statusOptions.includes(String(val).toUpperCase())) opts += `<option value="${val}" selected>${val}</option>`;
                     inputHtml = `<select class="form-input-field" id="${id}">${opts}</select>`;
