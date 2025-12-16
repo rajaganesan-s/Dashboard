@@ -453,24 +453,11 @@
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
+            /* Allow wrapping so menu isn't cut off */
             gap: 0.75rem;
             align-items: center;
-            overflow-x: auto;
-            scrollbar-width: thin;
-        }
-
-        .controls-bar::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .controls-bar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .controls-bar::-webkit-scrollbar-thumb {
-            background-color: var(--border);
-            border-radius: 4px;
+            /* overflow: visible; implicitly visible, do not clip */
         }
 
         .search-wrapper {
@@ -707,6 +694,71 @@
         :root[data-theme="dark"] .badge-indigo {
             background: rgba(129, 140, 248, 0.15);
             color: #818cf8;
+        }
+
+        :root[data-theme="dark"] .badge-indigo {
+            background: rgba(129, 140, 248, 0.15);
+            color: #818cf8;
+        }
+
+        /* Multi Select Styles */
+        .multi-select-container {
+            position: relative;
+            display: inline-block;
+            min-width: 160px;
+        }
+
+        .multi-select-trigger {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            user-select: none;
+        }
+
+        .multi-select-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 200px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 10000;
+            /* Increased z-index */
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: var(--radius-md);
+            padding: 0.5rem;
+            margin-top: 4px;
+        }
+
+        .multi-select-menu.open {
+            display: block;
+        }
+
+        .multi-select-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 8px;
+            cursor: pointer;
+            color: var(--text-main);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .multi-select-item:hover {
+            background: var(--bg-body);
+        }
+
+        .multi-select-item input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
         }
 
         /* Loader */
@@ -2078,9 +2130,8 @@
             }
         }
 
+        // --- FILTER & SORT ---
         function initDashboard() {
-            // Default to no sort column => triggers reverse natural order (Last record on top)
-            // if (!sortCol) sortCol = headers.find(h => h.toUpperCase() === 'TARGET DATE') || headers[0];
             buildFilters();
             filterData();
         }
@@ -2096,28 +2147,88 @@
 
                 const values = [...new Set(rawData.map(r => r[realHeader]))].filter(v => v).sort();
 
-                const select = document.createElement('select');
-                select.className = 'form-input';
-                select.style.minWidth = '150px';
-                select.setAttribute('data-col', realHeader);
-                select.onchange = filterData;
+                // Wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'multi-select-container';
+                wrapper.setAttribute('data-col', realHeader);
 
-                // Default Option
-                const defaultOpt = document.createElement('option');
-                defaultOpt.value = 'All';
-                defaultOpt.textContent = realHeader; // e.g. "STATUS"
-                select.appendChild(defaultOpt);
+                // Trigger Button
+                const trigger = document.createElement('div');
+                trigger.className = 'form-input multi-select-trigger';
+                trigger.innerHTML = `<span class="label">${realHeader}</span> <i class="fa-solid fa-chevron-down" style="font-size:0.7em; opacity:0.7;"></i>`;
+                trigger.onclick = (e) => {
+                    e.stopPropagation();
+                    closeAllMultiSelects(wrapper); // close others
+                    menu.classList.toggle('open');
+                };
 
-                // Value Options created safely
+                // Dropdown Menu
+                const menu = document.createElement('div');
+                menu.className = 'multi-select-menu';
+
+                // "Select All" Option
+                const allDiv = document.createElement('label');
+                allDiv.className = 'multi-select-item';
+                allDiv.style.borderBottom = '1px solid var(--border)';
+                allDiv.style.marginBottom = '4px';
+                allDiv.style.paddingBottom = '8px';
+                allDiv.innerHTML = `<input type="checkbox" value="All" checked onchange="handleMultiSelectChange(this)"> <span>Select All</span>`;
+                menu.appendChild(allDiv);
+
                 values.forEach(v => {
-                    const opt = document.createElement('option');
-                    opt.value = v;
-                    opt.textContent = v;
-                    select.appendChild(opt);
+                    const item = document.createElement('label');
+                    item.className = 'multi-select-item';
+                    item.innerHTML = `<input type="checkbox" value="${v}" checked onchange="handleMultiSelectChange(this)"> <span>${v}</span>`;
+                    // Prevent closing when clicking the item
+                    item.onclick = (e) => e.stopPropagation();
+                    menu.appendChild(item);
                 });
 
-                container.appendChild(select);
+                // Prevent closing when clicking Select All
+                allDiv.onclick = (e) => e.stopPropagation();
+
+                wrapper.appendChild(trigger);
+                wrapper.appendChild(menu);
+                container.appendChild(wrapper);
             });
+
+            // Click outside to close
+            document.addEventListener('click', () => closeAllMultiSelects());
+        }
+
+        function closeAllMultiSelects(except) {
+            document.querySelectorAll('.multi-select-menu.open').forEach(m => {
+                if (!except || !except.contains(m)) m.classList.remove('open');
+            });
+        }
+
+        function handleMultiSelectChange(checkbox) {
+            const menu = checkbox.closest('.multi-select-menu');
+            const container = menu.closest('.multi-select-container');
+            const colName = container.getAttribute('data-col');
+            const triggerLabel = container.querySelector('.label');
+            const allBoxes = menu.querySelectorAll('input[type="checkbox"]:not([value="All"])');
+            const allCheckbox = menu.querySelector('input[value="All"]');
+
+            if (checkbox.value === 'All') {
+                // Toggle all based on "All" status
+                allBoxes.forEach(cb => cb.checked = checkbox.checked);
+            } else {
+                // If one unchecked, uncheck "All". If all checked, check "All".
+                if (!checkbox.checked) allCheckbox.checked = false;
+                else {
+                    const allChecked = Array.from(allBoxes).every(cb => cb.checked);
+                    allCheckbox.checked = allChecked;
+                }
+            }
+
+            // Update Label
+            const checkedCount = Array.from(allBoxes).filter(cb => cb.checked).length;
+            if (checkedCount === allBoxes.length) triggerLabel.innerText = colName;
+            else if (checkedCount === 0) triggerLabel.innerText = `${colName} (0)`;
+            else triggerLabel.innerText = `${colName} (${checkedCount})`;
+
+            filterData();
         }
 
         function resetFilters() {
@@ -2125,20 +2236,46 @@
             document.getElementById('dateStart').value = '';
             document.getElementById('dateEnd').value = '';
             document.getElementById('overdueFilter').checked = false;
-            document.querySelectorAll('#dynamic-filters select').forEach(d => d.value = 'All');
+
+            // Reset Multi-selects
+            document.querySelectorAll('.multi-select-menu').forEach(menu => {
+                menu.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+                const container = menu.closest('.multi-select-container');
+                const colName = container.getAttribute('data-col');
+                container.querySelector('.label').innerText = colName;
+            });
+
             filterData();
         }
 
         function filterData() {
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const filters = document.querySelectorAll('#dynamic-filters select');
+            const filterContainers = document.querySelectorAll('.multi-select-container');
+
+            // Gather active filters
+            const activeFilters = {};
+            filterContainers.forEach(con => {
+                const col = con.getAttribute('data-col');
+                const menu = con.querySelector('.multi-select-menu');
+                // If "All" is checked, we don't need to filter by this column (optimization)
+                // But strictly speaking: get all checked values
+                const allCb = menu.querySelector('input[value="All"]');
+                if (!allCb.checked) {
+                    const checkedValues = Array.from(menu.querySelectorAll('input[type="checkbox"]:not([value="All"]):checked')).map(cb => cb.value);
+                    activeFilters[col] = checkedValues;
+                }
+            });
 
             filteredData = rawData.filter(row => {
-                // 1. Dropdown Filters
-                for (let sel of filters) {
-                    const col = sel.getAttribute('data-col');
-                    if (sel.value !== 'All' && row[col] !== sel.value) return false;
+                // 1. Multi-Select Filters
+                for (let col in activeFilters) {
+                    const allowed = activeFilters[col];
+                    const rowVal = row[col];
+                    // If no items selected loop logic: usually implies show none?
+                    // Current UI flow: if 0 selected, allow none.
+                    if (!allowed.includes(rowVal)) return false;
                 }
+
                 // 2. Global Search
                 if (search) {
                     const rowStr = Object.values(row).join(' ').toLowerCase();
@@ -2602,11 +2739,18 @@
 
         function saveFilterState() {
             const state = {};
-            // 1. Dynamic Dropdowns
-            const filters = document.querySelectorAll('#dynamic-filters select');
-            filters.forEach(sel => {
-                const col = sel.getAttribute('data-col');
-                if (col) state[col] = sel.value;
+            // 1. Dynamic Dropdowns (Multi-Select)
+            const params = document.querySelectorAll('.multi-select-container');
+            params.forEach(con => {
+                const col = con.getAttribute('data-col');
+                const menu = con.querySelector('.multi-select-menu');
+                // Check if all checked
+                const allCb = menu.querySelector('input[value="All"]');
+                if (!allCb.checked) {
+                    // Only save if NOT all (i.e., specific filters applied)
+                    const checkedValues = Array.from(menu.querySelectorAll('input[type="checkbox"]:not([value="All"]):checked')).map(cb => cb.value);
+                    if (checkedValues.length > 0) state[col] = checkedValues;
+                }
             });
 
             // 2. Global Controls
@@ -2616,11 +2760,6 @@
             state.overdue = document.getElementById('overdueFilter').checked;
 
             // 3. Sort
-            // (Sort state is global variables sortCol/sortAsc, we can persist them too if we want, 
-            // but the sort variables are already globals and might survive if not reset. 
-            // actually loadCloudFile resets 'headers' but maybe not sortCol if we are careful.
-            // initDashboard lines 1987 checks if (!sortCol). So persistence of global variable is enough if not overwritten.
-            // However, let's include them in returned state just in case we need to enforce.)
             state.sortCol = sortCol;
             state.sortAsc = sortAsc;
 
@@ -2631,23 +2770,31 @@
             if (!state) return;
             console.log("Restoring Filters:", state);
 
-            // 1. Dynamic Dropdowns
-            const filters = document.querySelectorAll('#dynamic-filters select');
-            filters.forEach(sel => {
-                const col = sel.getAttribute('data-col');
-                if (state[col]) {
-                    // Start by setting value
-                    sel.value = state[col];
-                    // Verify if it stuck (if option doesn't exist, it reverts to 'All')
-                    if (sel.value !== state[col] && state[col] !== 'All') {
-                        console.warn(`Filter value '${state[col]}' for '${col}' not found in new data. Adding temporary option.`);
-                        // Optional: Add the missing option so the filter is visible even if no data matches
-                        const opt = document.createElement('option');
-                        opt.value = state[col];
-                        opt.textContent = state[col] + " (0)";
-                        sel.appendChild(opt);
-                        sel.value = state[col];
-                    }
+            // 1. Dynamic Dropdowns (Multi-Select)
+            const params = document.querySelectorAll('.multi-select-container');
+            params.forEach(con => {
+                const col = con.getAttribute('data-col');
+                if (state[col] && Array.isArray(state[col])) {
+                    // User had specific options selected
+                    const menu = con.querySelector('.multi-select-menu');
+                    const allCb = menu.querySelector('input[value="All"]');
+                    allCb.checked = false; // Uncheck all first
+
+                    const boxes = menu.querySelectorAll('input[type="checkbox"]:not([value="All"])');
+                    let foundCount = 0;
+                    boxes.forEach(cb => {
+                        if (state[col].includes(cb.value)) {
+                            cb.checked = true;
+                            foundCount++;
+                        } else {
+                            cb.checked = false;
+                        }
+                    });
+
+                    // Trigger update logic to set label correctly
+                    handleMultiSelectChange(allCb);
+
+                    // Edge Case: If restored value not found (e.g. DELETED), count mismatch is fine, strict restore.
                 }
             });
 
