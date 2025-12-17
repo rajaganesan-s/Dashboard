@@ -221,10 +221,14 @@
             border-color: var(--primary);
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
             background: var(--primary-hover);
             border-color: var(--primary-hover);
+            color: white;
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            outline: none;
         }
 
         .btn-white {
