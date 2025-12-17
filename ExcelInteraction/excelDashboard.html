@@ -1236,6 +1236,57 @@
             margin: 0;
             padding-left: 20px;
         }
+
+        /* Responsive Date Filter Fix */
+        .date-filter-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-body);
+            padding: 0.3rem 0.8rem;
+            border-radius: 99px;
+            border: 1px solid var(--border);
+            flex-wrap: wrap;
+            /* Safety */
+        }
+
+        @media (max-width: 768px) {
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .date-filter-box {
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 0.5rem;
+            }
+
+            .date-filter-box input[type="date"] {
+                flex: 1;
+                min-width: 0;
+                /* Allow shrinking */
+            }
+
+            .search-wrapper {
+                width: 100%;
+                max-width: none;
+                flex: none;
+            }
+
+            #dynamic-filters {
+                width: 100%;
+                justify-content: space-between;
+                /* Spread filters */
+            }
+
+            /* Make multi-selects full width on mobile or sharing space */
+            .multi-select-container {
+                flex: 1;
+                min-width: 48%;
+                /* 2 per row approx */
+            }
+        }
     </style>
 </head>
 
