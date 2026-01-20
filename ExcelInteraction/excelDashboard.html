@@ -2529,7 +2529,7 @@
                         const today = new Date(); today.setHours(0, 0, 0, 0);
                         if (isNaN(rDate.getTime()) || rDate >= today) return false;
 
-                        const validStatuses = ['YET TO START', 'DEV IN-PROGRESS', 'DEV COMPLETED'];
+                        const validStatuses = ['YET TO START', 'DEV IN-PROGRESS'];
                         if (!validStatuses.some(s => String(rowStatus).toUpperCase().includes(s))) return false;
                     }
                 }
