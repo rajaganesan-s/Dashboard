@@ -3345,7 +3345,10 @@
 
                 } else {
                     rawData.push(newRow);
-                    filterData();
+                    // Refresh filters to include new tokens while preserving selection
+                    const savedFilters = saveFilterState();
+                    buildFilters();
+                    restoreFilterState(savedFilters);
                     showDashboard();
                 }
             } catch (e) {
@@ -3413,7 +3416,9 @@
                 showLoader(false);
             } else {
                 Object.assign(editingRow, newRow);
-                filterData();
+                const savedFilters = saveFilterState();
+                buildFilters();
+                restoreFilterState(savedFilters);
                 showDashboard();
             }
         }
@@ -3484,7 +3489,9 @@
             } else {
                 const idx = rawData.indexOf(editingRow);
                 if (idx > -1) rawData.splice(idx, 1);
-                filterData();
+                const savedFilters = saveFilterState();
+                buildFilters();
+                restoreFilterState(savedFilters);
                 showDashboard();
             }
         }
