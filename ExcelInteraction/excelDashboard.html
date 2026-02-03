@@ -1120,7 +1120,8 @@
             #mainTable td {
                 display: flex;
                 justify-content: space-between;
-                align-items: center;
+                align-items: flex-start;
+                /* Align to top for multi-line text */
                 text-align: right;
                 padding: 0.6rem 0;
                 border-bottom: 1px solid var(--divider);
@@ -1139,6 +1140,16 @@
                 color: var(--text-light);
                 margin-right: 1rem;
                 text-align: left;
+                flex-shrink: 0;
+                /* Ensure label doesn't shrink */
+            }
+
+            .td-content {
+                text-align: right;
+                word-break: break-word;
+                /* Ensure it takes available space but doesn't force overflow */
+                min-width: 0;
+                flex: 1;
             }
 
             /* Connect Screen Mobile */
@@ -2681,6 +2692,9 @@
                             }
                         }
 
+                        // FIX: WRAP CONTENT for Mobile Flex Layout Compatibility
+                        let contentHtml = '';
+
                         if (key.toUpperCase() === 'STATUS') {
                             let badgeClass = 'badge-gray';
                             const vLower = String(val).toLowerCase();
@@ -2693,17 +2707,25 @@
                             else if (vLower.includes('error') || vLower.includes('overdue')) badgeClass = 'badge-danger';
                             else if (vLower.includes('progress') || vLower.includes('start')) badgeClass = 'badge-warning';
 
-                            td.innerHTML = `<span class="badge ${badgeClass}">${val}</span>`;
+                            contentHtml = `<span class="badge ${badgeClass}">${val}</span>`;
                         } else if (['DELIVERABLES', 'REMARKS'].includes(key.toUpperCase())) {
                             // Render HTML Content with overflow protection
-                            td.innerHTML = String(val); // Allow HTML
+                            contentHtml = String(val); // Allow HTML
                             td.style.whiteSpace = "normal"; // Wrap text
-                            td.style.maxWidth = "400px";
+                            // Remove inline maxWidth that hurts mobile layout. 
+                            // If desktop creates issues, control via CSS classes.
+                            if (window.innerWidth > 1024) td.style.maxWidth = "400px";
                         } else {
-                            td.innerText = val;
+                            // Safe text rendering
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerText = val;
+                            contentHtml = tempDiv.innerHTML;
                         }
 
                         td.setAttribute('data-label', key);
+                        // Wrap in .td-content for flex layout control
+                        td.innerHTML = `<div class="td-content">${contentHtml}</div>`;
+
                         td.onclick = () => showEditScreen(row);
                         td.style.cursor = 'pointer';
                         tr.appendChild(td);
