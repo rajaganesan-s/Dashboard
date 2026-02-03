@@ -1678,12 +1678,25 @@
                     uriDisplay.style.fontSize = '0.8rem';
                     uriDisplay.style.textAlign = 'left';
                     uriDisplay.innerHTML = `
-                    <div style="color:var(--text-light); margin-bottom:4px;">Redirect URI (Add to Azure):</div>
-                    <code style="display:block; word-break:break-all; color:var(--primary); font-family:monospace;">${redirectUri}</code>
-                `;
+                        <div style="color:var(--text-light); margin-bottom:4px;">Redirect URI (Add to Azure):</div>
+                        <code style="display:block; word-break:break-all; color:var(--primary); font-family:monospace;">${redirectUri}</code>
+                    `;
                     authSection.appendChild(uriDisplay);
                 }
             }
+
+            // ESC Key to Go Back from Add/Edit Screens
+            document.addEventListener('keydown', function (event) {
+                if (event.key === "Escape") {
+                    const addScreen = document.getElementById('add-screen');
+                    const editScreen = document.getElementById('edit-screen');
+
+                    if (!addScreen.classList.contains('hidden') || !editScreen.classList.contains('hidden')) {
+                        showDashboard();
+                    }
+                }
+            });
+
         };
 
         async function tryAutoLogin(clientId) {
