@@ -2838,6 +2838,61 @@
                 }
             });
 
+            renderCharts(sCounts, aCounts, oCounts, tCounts);
+        }
+
+        function toggleFilterFromChart(colName, value) {
+            // Find the filter UI container
+            // We need to map the internal column name to the header name associated with the filter
+            // In this app, headers matched 'APP', 'STATUS' etc are used as data-col
+            const realHeader = headers.find(h => h.toUpperCase() === colName.toUpperCase());
+            if (!realHeader) return;
+
+            const con = document.querySelector(`.multi-select-container[data-col="${realHeader}"]`);
+            if (!con) return;
+
+            const menu = con.querySelector('.multi-select-menu');
+            const allCb = menu.querySelector('input[value="All"]');
+            const checkboxes = Array.from(menu.querySelectorAll('input[type="checkbox"]:not([value="All"])'));
+
+            // Find the specific checkbox (case insensitive match potential)
+            // The value from chart is 'label', value in checkbox is cell value. Should match.
+            const targetCb = checkboxes.find(cb => cb.value === value);
+            if (!targetCb) return;
+
+            // LOGIC:
+            // 1. If currently showing ALL -> Switch to ONLY this value
+            // 2. If currently showing ONLY this value -> Switch back to ALL
+            // 3. If currently showing mixed selection -> Switch to ONLY this value
+
+            const currentChecked = checkboxes.filter(cb => cb.checked);
+            const isOnlyTargetChecked = currentChecked.length === 1 && currentChecked[0] === targetCb;
+            const isAllChecked = allCb.checked;
+
+            if (isOnlyTargetChecked) {
+                // Toggle Off (Reset to All)
+                allCb.checked = true;
+                checkboxes.forEach(cb => cb.checked = true);
+            } else {
+                // Toggle On (Isolate this one)
+                allCb.checked = false;
+                checkboxes.forEach(cb => cb.checked = false);
+                targetCb.checked = true;
+            }
+
+            // Update UI Label
+            const triggerLabel = con.querySelector('.label');
+            const newCheckedCount = menu.querySelectorAll('input[type="checkbox"]:not([value="All"]):checked').length;
+
+            // Manual set if reuse function doesn't exist in scope easily
+            if (allCb.checked) triggerLabel.innerText = realHeader;
+            else if (newCheckedCount === 0) triggerLabel.innerText = `${realHeader} (0)`;
+            else triggerLabel.innerText = `${realHeader} (${newCheckedCount})`;
+
+            filterData();
+        }
+
+        function renderCharts(sCounts, aCounts, oCounts, tCounts) {
             // --- STYLING & CONFIG ---
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
@@ -2913,6 +2968,12 @@
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     cutout: '60%',
+                    onClick: (e, elements, chart) => {
+                        if (!elements || elements.length === 0) return;
+                        const i = elements[0].index;
+                        const label = chart.data.labels[i];
+                        toggleFilterFromChart('STATUS', label);
+                    },
                     plugins: {
                         legend: {
                             position: 'right',
@@ -2977,7 +3038,13 @@
                             border: { display: false }
                         }
                     },
-                    plugins: { legend: { display: false } }
+                    plugins: { legend: { display: false } },
+                    onClick: (e, elements, chart) => {
+                        if (!elements || elements.length === 0) return;
+                        const i = elements[0].index;
+                        const label = chart.data.labels[i];
+                        toggleFilterFromChart('APP', label);
+                    }
                 }
             });
 
